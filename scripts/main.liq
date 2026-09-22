@@ -9,11 +9,13 @@ clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
 gosp3 = playlist("/liqfolder/gosp3.m3u")
 satmix = playlist("/liqfolder/satmix.m3u")
 
-# Daily GLC News at 5:00 PM Pacific. Liquidsoap TZ is America/New_York.
-# Pacific and Eastern stay 3 hours apart year-round, so 5 PM PT is always 8 PM ET.
-# Fallible: if the MP3 is missing, this source is not ready and music stays on.
+# Daily GLC News (raw MP3, single/once only — never playlist/.m3u). TZ: America/New_York.
+# Morning: 11:00–11:30 Pacific = {14h0m-14h30m} ET. Evening: 6:00–6:30 PT = {21h0m-21h30m} ET.
+# Separate once(single()) per window so each fires once daily from the start of its window.
+# Fallible: if the MP3 is missing, news sources are not ready and music stays on.
 news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
-news = once(single(news_path))
+news_morning = once(single(news_path))
+news_evening = once(single(news_path))
 
 # === Time-based switching between day and night playlists ===
 music = switch([
@@ -32,11 +34,13 @@ music = random(weights=[1, 2], [jingles, music])
 # === Add top-of-the-hour clock jingle (skipped during the news window) ===
 music = add([music, switch([({ 0m0s }, clock)])])
 
-# 8:00–8:30 PM Eastern = 5:00–5:30 PM Pacific, every day.
-# track_sensitive=false starts news on time. Missing MP3 leaves this
-# switch unready, so fallback keeps the regular music playlists.
+# News windows (ET): morning {14h0m-14h30m}, evening {21h0m-21h30m}.
+# track_sensitive=false starts each bulletin on time; after it ends, music resumes until window closes.
 radio = fallback(track_sensitive=false, [
-  switch(track_sensitive=false, [({ 20h0m-20h30m }, news)]),
+  switch(track_sensitive=false, [
+    ({ 14h0m-14h30m }, news_morning),
+    ({ 21h0m-21h30m }, news_evening)
+  ]),
   music
 ])
 
