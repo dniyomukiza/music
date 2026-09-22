@@ -1233,11 +1233,6 @@
     <div class="container">
         
         <div class="main-card">
-            <div class="card-header">
-                <h2><i class="fas fa-microphone"></i> Create Your News Broadcast</h2>
-                <p>Enter topics of your interest and let our AI create a professional news bulletin</p>
-            </div>
-            
             <div class="card-body">
                 <div class="features-grid">
                     <div class="feature-card">
@@ -1274,14 +1269,6 @@
                         <h3>Multi Language & Transcription</h3>
                         <p>Transcribe your news audio to text, download transcripts, and listen in 60+ languages including English, Spanish, French, German, Chinese, Japanese, Arabic, and many more</p>
                     </div>
-                    <a href="/mybook/stories" class="feature-card clickable-card" style="text-decoration: none; color: inherit;">
-                        <div class="feature-icon"><i class="fas fa-newspaper"></i></div>
-                        <h3>Worldwide Stories</h3>
-                        <p>Read stories from freelance journalists worldwide. Discover quality journalism covering news, features, opinion pieces, and investigative reports from around the globe</p>
-                        <div class="card-hover-effect">
-                            <i class="fas fa-arrow-right"></i>
-                        </div>
-                    </a>
                     <a href="{{ url_for('book_platform.content_hub') }}" class="feature-card clickable-card" style="text-decoration: none; color: inherit;">
                         <div class="feature-icon"><i class="fas fa-tv"></i></div>
                         <h3>GLC Media</h3>
@@ -1292,53 +1279,10 @@
                     </a>
                 </div>
 
-                <!-- Flask Form for server-side validation -->
-                <form method="POST" id="flaskForm">
+                <form method="POST" id="flaskForm" hidden>
                     {{ form.hidden_tag() }}
-                    <div class="input-section">
-                        <label for="keyword" class="input-label">
-                            <i class="fas fa-newspaper"></i> Enter News Topic
-                        </label>
-                        <div class="topic-input-container">
-                            <div class="input-group">
-                                {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter or tap Add (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
-                                <button type="submit" class="generate-btn-mobile" id="generateBtnMobile">
-                                    <i class="fas fa-plus"></i>
-                                    <span class="btn-text">Add Topic</span>
-                                </button>
-                            </div>
-                            <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(145deg, #c9a227, #a88416); border: none; padding: 10px 20px; border-radius: 8px; color: #060807;">
-                                    <i class="fas fa-play"></i> Generate News
-                                </button>
-                            </div>
-                            <div id="flaskValidationFeedback" class="validation-feedback"></div>
-                            {% if form.keyword.errors %}
-                                <div class="validation-error">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>{{ form.keyword.errors[0] }}</span>
-                                </div>
-                            {% endif %}
-                            <!-- Generate News button removed from Flask form to prevent duplicate triggers -->
-                            {% if validation_error %}
-                                <div class="validation-error">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>{{ validation_error }}</span>
-                                    <div class="validation-suggestions">
-                                        <strong>Try topics like:</strong>
-                                        <ul>
-                                            <li>Politics, elections, government</li>
-                                            <li>Economy, business, markets</li>
-                                            <li>International affairs, conflicts</li>
-                                            <li>Health, science, technology</li>
-                                            <li>Sports, entertainment, culture</li>
-                                            <li>Natural disasters, emergencies</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
+                    {{ form.keyword(id="keyword", class="topic-input", autocomplete="off") }}
+                    <div id="flaskValidationFeedback" class="validation-feedback"></div>
                 </form>
                 
                 <!-- Success/Error Messages -->
@@ -1370,38 +1314,12 @@
                 </div>
 
                 <!-- JavaScript Form for advanced features -->
-                <form id="newsForm" style="display: none;">
-                    <div class="input-section">
-                        <label for="topicInput" class="input-label">
-                            <i class="fas fa-plus-circle"></i> Add News Topics
-                        </label>
-                        <div class="topic-input-container">
-                            <div class="input-group">
-                                <input 
-                                    type="text" 
-                                    id="topicInput" 
-                                    class="topic-input" 
-                                    placeholder="Type a topic and press Enter or tap Add (e.g., 'college football', 'election results', 'AI developments')"
-                                    autocomplete="off"
-                                >
-                                <button type="button" class="add-topic-btn" id="addTopicBtn">
-                                    <i class="fas fa-plus"></i>
-                                    <span class="btn-text">Add Topic</span>
-                                </button>
-                            </div>
-                            <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(145deg, #c9a227, #a88416); border: none; padding: 10px 20px; border-radius: 8px; color: #060807;">
-                                    <i class="fas fa-play"></i> Generate News
-                                </button>
-                            </div>
-                            <div id="validationFeedback" class="validation-feedback"></div>
-                            <div id="topicSuggestions" class="topic-suggestions"></div>
-                        </div>
-                        <div class="topics-display" id="topicsDisplay">
-                            <div class="empty-state">No topics added yet. Start typing above!</div>
-                        </div>
-                        <div id="validationSummary" class="validation-summary"></div>
-                    </div>
+                <form id="newsForm" hidden>
+                    <input type="text" id="topicInput" class="topic-input" autocomplete="off">
+                    <div id="validationFeedback" class="validation-feedback"></div>
+                    <div id="topicSuggestions" class="topic-suggestions"></div>
+                    <div class="topics-display" id="topicsDisplay"></div>
+                    <div id="validationSummary" class="validation-summary"></div>
                     
                     <!-- Approved Topics Section -->
                     <div class="approved-topics-section" id="approvedTopicsSection" style="display: none;">

@@ -49,9 +49,9 @@
         <div class="col-md-6 col-lg-5">
             <div class="content-card{% if highlight_card == 'stories' %} content-card--your-home{% endif %}">
                 <div class="card-body">
-                    <h4 class="card-title">GLC Media Stories</h4>
+                    <h4 class="card-title">GLC Blogs</h4>
                     <p class="card-text">
-                        Read community blogs, freelance journalism, and perspectives, or publish your own story when you have a blogger account.
+                        Read community blogs and perspectives, or publish your own article
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('blog.blogs') }}" class="btn btn-modern btn-modern-primary">
@@ -92,6 +92,7 @@
     </div>
 </div>
 
+<div class="modal fade" id="createArtistModalContentHub" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">

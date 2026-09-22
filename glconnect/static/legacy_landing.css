@@ -141,6 +141,26 @@
             outline-offset: 4px;
         }
 
+        .nav-links .is-inactive,
+        .mobile-nav .is-inactive {
+            color: var(--text-muted);
+            font-size: clamp(0.68rem, 1vw, 0.85rem);
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 0.35rem 0;
+            opacity: 0.4;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .mobile-nav .is-inactive {
+            display: block;
+            padding: 1rem 1.5rem;
+            font-size: inherit;
+            border-bottom: 1px solid rgba(42, 61, 50, 0.4);
+        }
+
         .wordmark {
             justify-self: center;
             display: inline-flex;

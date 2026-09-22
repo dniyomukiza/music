@@ -2,9 +2,14 @@ log.stdout := true
 
 # === Playlists and fallback setup ===
 default = single("/liqfolder/jinglemix.ogg")      # Fallback track
-day = playlist("/liqfolder/eleven.m3u")     # Day (6h–22h): mixes
-night = playlist("/liqfolder/eleven.m3u")  # Night (22h–6h): downloads (ytauto)
-jingles = playlist("/liqfolder/jingles.m3u")      # Jingles playlist
+# Rotate needs two plain playlists. A switch/fallback child is treated as one
+# continuous source, so jingles never get a turn.
+songs = playlist(id="eleven_songs", reload_mode="watch", mode="normal", "/liqfolder/eleven.m3u")
+jingles = fallback(track_sensitive=true, [
+  playlist(id="radio_jingles", reload_mode="watch", mode="normal", "/liqfolder/jingles.m3u"),
+  single("/liqfolder/jingle.mp3"),
+  single("/liqfolder/jinglemix.ogg")
+])
 clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
 gosp3 = playlist("/liqfolder/eleven.m3u")
 satmix = playlist("/liqfolder/eleven.m3u")
@@ -18,19 +23,9 @@ news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
 news_morning = once(single(news_path))
 news_evening = once(single(news_path))
 
-# === Time-based switching between day and night playlists ===
-music = switch([
-  ({ 0w }, gosp3),
-  ({ 6w }, satmix),
-  ({ 7w }, satmix),
-  ({ 6h-22h }, day),    # Day: mixes.m3u
-  ({ 22h-6h }, night),  # Night: ytauto.m3u (downloads)
-  ({ true }, night)
-])
-music = fallback([music, default])  # Fallback to default if playlists fail
-
-# === Jingle after every song (1:1 rotate) ===
-music = rotate(weights=[1, 1], [jingles, music])
+# Song, then jingle, then song, then jingle.
+music = rotate(weights=[1, 1], [songs, jingles])
+music = fallback([music, default])
 
 # === Add top-of-the-hour clock jingle (skipped during the news window) ===
 music = add([music, switch([({ 0m0s }, clock)])])

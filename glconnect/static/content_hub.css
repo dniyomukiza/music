@@ -298,7 +298,10 @@
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
 }
 
-/* Keep dialogs above the dim overlay and live radio/TV bars (z-index 1040). */
+/* Keep dialogs hidden until opened, and above the dim overlay / live bars. */
+.legacy-content-hub .modal:not(.show) {
+  display: none;
+}
 .legacy-content-hub .modal {
   z-index: 1080;
 }
