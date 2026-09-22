@@ -2,12 +2,13 @@ log.stdout := true
 
 # === Playlists and fallback setup ===
 default = single("/liqfolder/jinglemix.ogg")      # Fallback track
-day = playlist("/liqfolder/mixes.m3u")     # Day (6h–22h): mixes
-night = playlist("/liqfolder/ytauto.m3u")  # Night (22h–6h): downloads (ytauto)
+day = playlist("/liqfolder/eleven.m3u")     # Day (6h–22h): mixes
+night = playlist("/liqfolder/eleven.m3u")  # Night (22h–6h): downloads (ytauto)
 jingles = playlist("/liqfolder/jingles.m3u")      # Jingles playlist
 clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
-gosp3 = playlist("/liqfolder/gosp3.m3u")
-satmix = playlist("/liqfolder/satmix.m3u")
+gosp3 = playlist("/liqfolder/eleven.m3u")
+satmix = playlist("/liqfolder/eleven.m3u")
+eleven = playlist("/liqfolder/eleven.m3u")
 
 # Daily GLC News (raw MP3, single/once only — never playlist/.m3u). TZ: America/New_York.
 # Morning: 11:00–11:30 Pacific = {14h0m-14h30m} ET. Evening: 6:00–6:30 PT = {21h0m-21h30m} ET.
@@ -83,4 +84,14 @@ output.icecast(%mp3,
   password="123",
   mount="satmix",
   sat_radio
+)
+
+# === ElevenLabs originals (standalone, not mixed into station day rotation) ===
+eleven_radio = mksafe(eleven)
+output.icecast(%mp3,
+  host="icecast2",
+  port=8000,
+  password="123",
+  mount="eleven",
+  eleven_radio
 )
