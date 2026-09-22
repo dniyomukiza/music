@@ -13,7 +13,7 @@ satmix = playlist("/liqfolder/satmix.m3u")
 # Pacific and Eastern stay 3 hours apart year-round, so 5 PM PT is always 8 PM ET.
 # Fallible: if the MP3 is missing, this source is not ready and music stays on.
 news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
-news = playlist(reload=120, news_path)
+news = once(single(news_path))
 
 # === Time-based switching between day and night playlists ===
 music = switch([
