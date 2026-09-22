@@ -29,8 +29,8 @@ music = switch([
 ])
 music = fallback([music, default])  # Fallback to default if playlists fail
 
-# === Add jingles randomly (1 jingle every 2 songs) ===
-music = random(weights=[1, 2], [jingles, music])
+# === Jingle after every song (1:1 rotate) ===
+music = rotate(weights=[1, 1], [jingles, music])
 
 # === Add top-of-the-hour clock jingle (skipped during the news window) ===
 music = add([music, switch([({ 0m0s }, clock)])])

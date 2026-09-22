@@ -173,6 +173,48 @@ BATCH_2 = [
     },
 ]
 
+BATCH_3 = [
+    {
+        "id": "12",
+        "title": "GLC Radio - Peak Hour Electro",
+        "genre": "electro-club",
+        "vocal": "female",
+        "music_length_ms": 110000,
+        "prompt": (
+            "High-energy electro club dance, 130 BPM, female chant hook, "
+            "relentless four-on-the-floor kick, sidechained bass, bright lead synth riff, "
+            "drop in the first 6 seconds, no intro, no breakdown, no ballad, no afro, no reggae, "
+            "chorus repeats three times, runtime 1:50, peak-time club radio mix."
+        ),
+    },
+    {
+        "id": "13",
+        "title": "GLC Radio - Warehouse Stomp",
+        "genre": "electro-club",
+        "vocal": "male",
+        "music_length_ms": 110000,
+        "prompt": (
+            "High-energy warehouse electro dance, 128 BPM, male vocal chops only, "
+            "heavy stomp kick, distorted bass growl, industrial synth stabs, "
+            "hook hits immediately, no verse storytelling, no pop softness, "
+            "second drop at 0:55, runtime 1:50, dark club energy scaled for radio."
+        ),
+    },
+    {
+        "id": "14",
+        "title": "GLC Radio - Festival Electro Drop",
+        "genre": "electro-club",
+        "vocal": "female",
+        "music_length_ms": 115000,
+        "prompt": (
+            "High-energy festival electro dance, 132 BPM, female gang-vocal hook, "
+            "big-room supersaw, rolling bass, snare-roll into an early drop, "
+            "hands-up club energy, no midtempo, no R&B, no afrobeat, "
+            "chorus repeats, cold ending, runtime 1:55, festival main-stage radio edit."
+        ),
+    },
+]
+
 
 def load_api_key() -> str:
     env_path = ROOT / ".env"
@@ -250,7 +292,7 @@ def compose(api_key: str, prompt: str, music_length_ms: int) -> bytes:
     raise RuntimeError(f"HTTP {response.status_code}: {body}")
 
 
-BATCHES = {"1": BATCH_1, "2": BATCH_2}
+BATCHES = {"1": BATCH_1, "2": BATCH_2, "3": BATCH_3}
 
 
 def main() -> int:
