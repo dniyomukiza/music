@@ -5223,6 +5223,25 @@ def admin_books():
     return render_template('book_platform/admin_books.html', books=books)
 
 
+@book_bp.route('/admin/news-video', methods=['POST'])
+@login_required
+def admin_generate_video_news():
+    """Start HeyGen video from the latest finished radio bulletin."""
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('book_platform.marketplace'))
+    from glconnect.news_routes import start_latest_video_bulletin
+
+    payload, status = start_latest_video_bulletin()
+    if status >= 400:
+        flash(payload.get('error') or 'Video news could not start.', 'error')
+    elif payload.get('status') == 'completed':
+        flash('Video news for the latest radio bulletin is already ready.', 'info')
+    else:
+        flash('Video news is generating from the latest radio bulletin. TV updates when it finishes.', 'success')
+    return redirect(url_for('book_platform.admin_books'))
+
+
 @book_bp.route('/admin/books/delete-test-books', methods=['POST'])
 @login_required
 def admin_delete_test_books():

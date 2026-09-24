@@ -1,7 +1,7 @@
-"""HeyGen REST v3 client for GRO News voices and complementary video bulletins.
+"""HeyGen REST v3 client for complementary GRO News video bulletins.
 
-Radio TTS uses stored HeyGen voice IDs via POST /v3/voices/speech. Video is still
-invoked only after a successful broadcast, from POST /routes2/news/video/<task_id>.
+Video is never scheduled. It runs only when POST /routes2/news/video/<task_id>
+is requested, and that request looks up the saved radio scripts and audio files.
 Video failures never change the news task status.
 """
 
@@ -134,6 +134,13 @@ def _log(event: str, **fields) -> None:
     print(f"{event} {extras}".strip())
 
 
+def _log_model_error(model: str, issue: str) -> None:
+    text = str(issue or "unknown").replace("\n", " ").strip()
+    if len(text) > 400:
+        text = text[:400] + "..."
+    print(f"ERROR: model provider=heygen model={model or 'avatar'} issue={text}")
+
+
 def heygen_api_key() -> str:
     return (os.getenv("HEYGEN_API_KEY") or "").strip()
 
@@ -176,16 +183,23 @@ def _heygen_request(method: str, path: str, api_key: str, json_body=None, params
     }
     if json_body is not None:
         kwargs["json"] = json_body
-    response = requests.request(method, url, **kwargs)
+    try:
+        response = requests.request(method, url, **kwargs)
+    except requests.RequestException as exc:
+        issue = f"HeyGen {method} {path} request failed: {exc}"
+        _log_model_error("avatar", issue)
+        raise RuntimeError(issue) from exc
     try:
         payload = response.json()
     except ValueError:
         payload = {"error": response.text[:400]}
     if response.status_code >= 400:
-        raise RuntimeError(
+        issue = (
             f"HeyGen {method} {path} HTTP {response.status_code}: "
             f"{_error_message(payload, response.text[:240])}"
         )
+        _log_model_error("avatar", issue)
+        raise RuntimeError(issue)
     return _unwrap(payload) if unwrap else payload
 
 
@@ -632,24 +646,83 @@ def ensure_reporter_identity(desk: str, reporter_name: str, api_key: str) -> dic
             row.last_error = str(exc)[:1000]
             db.session.commit()
             _log("heygen_clip_fail", desk=desk, resource="roster", error=str(exc)[:240])
+            _log_model_error("avatar", f"desk={desk} roster failed: {exc}")
             raise
 
 
-def _create_avatar_video(api_key: str, avatar_id: str, voice_id: str, script: str, title: str) -> str:
+def _upload_audio_asset(api_key: str, path: str) -> str:
+    """Upload a radio take and return a HeyGen audio URL for lip-sync."""
+    with open(path, "rb") as handle:
+        payload = handle.read()
+    if len(payload) < 64:
+        issue = f"Radio audio is empty: {path}"
+        _log_model_error("avatar", issue)
+        raise RuntimeError(issue)
+    try:
+        response = requests.post(
+            "https://upload.heygen.com/v1/asset",
+            headers={"X-Api-Key": api_key, "Content-Type": "audio/mpeg"},
+            data=payload,
+            timeout=(15, 180),
+        )
+    except requests.RequestException as exc:
+        issue = f"HeyGen audio upload request failed: {exc}"
+        _log_model_error("avatar", issue)
+        raise RuntimeError(issue) from exc
+    try:
+        body = response.json()
+    except ValueError:
+        body = {"error": response.text[:400]}
+    if response.status_code >= 400:
+        issue = (
+            f"HeyGen audio upload HTTP {response.status_code}: "
+            f"{_error_message(body, response.text[:240])}"
+        )
+        _log_model_error("avatar", issue)
+        raise RuntimeError(issue)
+    data = _unwrap(body)
+    if not isinstance(data, dict):
+        data = {}
+    audio_url = str(data.get("url") or "").strip()
+    if audio_url:
+        return audio_url
+    asset_id = str(data.get("id") or data.get("asset_id") or "").strip()
+    if asset_id:
+        return f"asset:{asset_id}"
+    issue = f"HeyGen audio upload returned no url: {body!r}"[:400]
+    _log_model_error("avatar", issue)
+    raise RuntimeError(issue)
+
+
+def _create_avatar_video(
+    api_key: str,
+    avatar_id: str,
+    voice_id: str,
+    script: str,
+    title: str,
+    audio_url: str = "",
+) -> str:
+    body = {
+        "type": "avatar",
+        "avatar_id": avatar_id,
+        "title": title[:120],
+        "resolution": "720p",
+        "aspect_ratio": "16:9",
+        "background": {"type": "color", "value": "#060807"},
+    }
+    # Radio anchor takes are mutually exclusive with a second HeyGen voice.
+    if audio_url.startswith("asset:"):
+        body["audio_asset_id"] = audio_url.split(":", 1)[1]
+    elif audio_url:
+        body["audio_url"] = audio_url
+    else:
+        body["voice_id"] = voice_id
+        body["script"] = script
     data = _heygen_request(
         "POST",
         "/v3/videos",
         api_key,
-        {
-            "type": "avatar",
-            "avatar_id": avatar_id,
-            "voice_id": voice_id,
-            "script": script,
-            "title": title[:120],
-            "resolution": "720p",
-            "aspect_ratio": "16:9",
-            "background": {"type": "color", "value": "#060807"},
-        },
+        body,
     )
     video_id = None
     if isinstance(data, dict):
@@ -657,7 +730,9 @@ def _create_avatar_video(api_key: str, avatar_id: str, voice_id: str, script: st
         if not video_id and isinstance(data.get("video"), dict):
             video_id = data["video"].get("id") or data["video"].get("video_id")
     if not video_id:
-        raise RuntimeError(f"HeyGen video create returned no video_id: {data!r}"[:400])
+        issue = f"HeyGen video create returned no video_id: {data!r}"[:400]
+        _log_model_error("avatar", issue)
+        raise RuntimeError(issue)
     _log("heygen_create", resource="video", video_id=video_id, title=title)
     return str(video_id)
 
@@ -674,7 +749,9 @@ def _poll_video(api_key: str, video_id: str) -> dict:
         if last_status in {"completed", "complete", "success"}:
             url = data.get("video_url") or data.get("url")
             if not url:
-                raise RuntimeError(f"HeyGen video {video_id} completed without video_url")
+                issue = f"HeyGen video {video_id} completed without video_url"
+                _log_model_error("avatar", issue)
+                raise RuntimeError(issue)
             return {
                 "video_id": video_id,
                 "url": url,
@@ -682,13 +759,17 @@ def _poll_video(api_key: str, video_id: str) -> dict:
                 "thumbnail_url": data.get("thumbnail_url"),
             }
         if last_status in {"failed", "error"}:
-            raise RuntimeError(
+            issue = (
                 data.get("failure_message")
                 or data.get("error")
                 or f"HeyGen video {video_id} failed"
             )
+            _log_model_error("avatar", f"video_id={video_id} {issue}")
+            raise RuntimeError(issue)
         time.sleep(_VIDEO_POLL_SECONDS)
-    raise TimeoutError(f"HeyGen video {video_id} not ready after {_VIDEO_TIMEOUT_SECONDS}s (last={last_status})")
+    issue = f"HeyGen video {video_id} not ready after {_VIDEO_TIMEOUT_SECONDS}s (last={last_status})"
+    _log_model_error("avatar", issue)
+    raise TimeoutError(issue)
 
 
 def _clip_record(**fields) -> dict:
@@ -720,10 +801,13 @@ def _public_clip(clip: dict) -> dict:
 
 def _clip_key(clip: dict) -> tuple:
     role = clip.get("role")
+    voiced = "radio-audio" if clip.get("audio_path") else "script"
     if role == "reporter":
         return (role, clip.get("desk"), clip.get("topic"))
     if role == "anchor_handoff":
-        return (role, clip.get("topic"), clip.get("name"))
+        return (role, clip.get("topic"), clip.get("name"), voiced)
+    if role in ("anchor_intro", "anchor_outro"):
+        return (role, voiced)
     return (role,)
 
 
@@ -916,7 +1000,136 @@ def assemble_bulletin_mp4(task_id: str, clips: list) -> str:
             err = (result.stderr or result.stdout or "ffmpeg failed")[-400:]
             raise RuntimeError(err)
 
+    publish_tv_news(output_path)
     return output_path
+
+
+# The live TV playlist already points at this file. A new bulletin replaces it in place.
+TV_NEWS_MP4_NAME = "The Weeknd - final_news_broadcast.mp4"
+
+
+def _tv_news_destinations() -> list[str]:
+    name = TV_NEWS_MP4_NAME
+    paths = []
+    for base in ("", "/usr/src/appdir", "/liqfolder"):
+        prefix = f"{base}/" if base else ""
+        paths.append(f"{prefix}glconnect/static/ytautovid/{name}")
+    unique = []
+    seen = set()
+    for path in paths:
+        key = os.path.abspath(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(path)
+    return unique
+
+
+def publish_tv_news(source_path: str) -> str:
+    """Replace the MP4 Liquidsoap TV already plays. Does not rewrite the playlist."""
+    if not os.path.isfile(source_path) or os.path.getsize(source_path) == 0:
+        raise RuntimeError("Cannot publish an empty news video to TV")
+    published = ""
+    for dest in _tv_news_destinations():
+        parent = os.path.dirname(dest)
+        if not os.path.isdir(parent):
+            continue
+        staging = os.path.join(parent, ".final_news_broadcast.writing.mp4")
+        shutil.copyfile(source_path, staging)
+        os.replace(staging, dest)
+        published = dest
+        _log("heygen_tv", status="replaced", path=dest, bytes=os.path.getsize(dest))
+    if not published:
+        dest = _tv_news_destinations()[0]
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        staging = os.path.join(os.path.dirname(dest), ".final_news_broadcast.writing.mp4")
+        shutil.copyfile(source_path, staging)
+        os.replace(staging, dest)
+        published = dest
+        _log("heygen_tv", status="replaced", path=dest, bytes=os.path.getsize(dest))
+    for base in ("", "/usr/src/appdir", "/liqfolder"):
+        prefix = f"{base}/" if base else ""
+        playlist = f"{prefix}video/videolist.m3u"
+        if os.path.isfile(playlist):
+            os.utime(playlist, None)
+    return published
+
+
+def _existing_audio(path: str) -> str:
+    candidate = (path or "").strip()
+    if candidate and os.path.isfile(candidate) and os.path.getsize(candidate) > 0:
+        return candidate
+    return ""
+
+
+def _radio_search_roots(task_id: str) -> tuple[str, list[str], list[str]]:
+    safe = re.sub(r"[^A-Za-z0-9_-]", "", str(task_id or ""))
+    archive_roots = []
+    audio_roots = []
+    for base in ("", "/usr/src/appdir", "/liqfolder"):
+        prefix = f"{base}/" if base else ""
+        if safe:
+            archive_roots.append(f"{prefix}glconnect/static/news_video/radio/{safe}")
+        audio_roots.append(f"{prefix}glconnect/static/audio")
+    return safe, archive_roots, audio_roots
+
+
+def locate_radio_takes(task_id: str, scripts: dict) -> dict:
+    """Find the radio files for a prompted video run. Does not call HeyGen."""
+    located = dict(scripts or {})
+    reporters = [dict(row) for row in (located.get("reporters") or []) if isinstance(row, dict)]
+    safe, archive_roots, audio_roots = _radio_search_roots(task_id)
+    archive_dir = next((root for root in archive_roots if safe), "")
+
+    def find_take(saved: str, archive_name: str, working_name: str) -> str:
+        found = _existing_audio(saved)
+        if found:
+            return found
+        for root in archive_roots:
+            found = _existing_audio(os.path.join(root, archive_name))
+            if found:
+                return found
+        for root in audio_roots:
+            found = _existing_audio(os.path.join(root, working_name))
+            if found and archive_dir:
+                os.makedirs(archive_dir, exist_ok=True)
+                dest = os.path.join(archive_dir, archive_name)
+                if os.path.abspath(found) != os.path.abspath(dest):
+                    shutil.copyfile(found, dest)
+                    copied = _existing_audio(dest)
+                    if copied:
+                        return copied
+            if found:
+                return found
+        return ""
+
+    located["intro_audio"] = find_take(located.get("intro_audio") or "", "intro.mp3", "intro_audio.mp3")
+    located["outro_audio"] = find_take(located.get("outro_audio") or "", "outro.mp3", "outro_audio.mp3")
+    missing = []
+    if not located["intro_audio"]:
+        missing.append("intro")
+    if not located["outro_audio"]:
+        missing.append("outro")
+    for index, row in enumerate(reporters):
+        row["handoff_audio"] = find_take(
+            row.get("handoff_audio") or "",
+            f"handoff_{index}.mp3",
+            f"transition_audio_{index}.mp3",
+        )
+        if not row["handoff_audio"]:
+            missing.append(f"handoff_{index}")
+    located["reporters"] = reporters
+    _log(
+        "heygen_files",
+        task_id=task_id,
+        intro=bool(located.get("intro_audio")),
+        outro=bool(located.get("outro_audio")),
+        handoffs=sum(1 for row in reporters if row.get("handoff_audio")),
+        reporters=len(reporters),
+    )
+    for name in missing:
+        _log_model_error("avatar", f"task={task_id} missing radio file {name}")
+    return located
 
 
 def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_clips=None) -> dict:
@@ -927,6 +1140,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
     api_key = heygen_api_key()
     if not api_key:
         _log("heygen_skip", reason="no_api_key")
+        _log_model_error("avatar", "HEYGEN_API_KEY is not set. Video bulletin was not generated.")
         state = {
             "status": "failed",
             "clips": [],
@@ -949,7 +1163,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
         }
         merge_result({"heygen": state})
         return state
-    scripts = _fill_handoff_scripts(scripts)
+    scripts = locate_radio_takes(task_id, _fill_handoff_scripts(scripts))
     merge_result({"scripts": scripts})
     reporters = scripts.get("reporters") or []
     _log(
@@ -975,7 +1189,20 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
 
     def render_clip(clip):
         try:
-            if not (clip.get("script") or "").strip():
+            audio_url = ""
+            audio_path = clip.get("audio_path") or ""
+            if audio_path and os.path.isfile(audio_path):
+                try:
+                    audio_url = _upload_audio_asset(api_key, audio_path)
+                    _log("heygen_anchor_audio", role=clip.get("role"), path=os.path.basename(audio_path))
+                except Exception as exc:
+                    _log("heygen_anchor_audio", role=clip.get("role"), status="fallback", error=str(exc)[:240])
+                    _log_model_error(
+                        "avatar",
+                        f"role={clip.get('role')} radio audio upload failed, falling back to script: {exc}",
+                    )
+                    audio_url = ""
+            if not audio_url and not (clip.get("script") or "").strip():
                 raise RuntimeError("Empty script")
             if _is_anchor_identity(clip["avatar_id"], clip["voice_id"]) and clip["role"] not in (
                 "anchor_intro",
@@ -984,12 +1211,16 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
             ):
                 _log("heygen_anchor_guard", role=clip["role"], desk=clip.get("desk"))
                 raise RuntimeError("Reporter clip blocked from using the studio anchor identity")
+            if clip["role"] in ("anchor_intro", "anchor_outro", "anchor_handoff"):
+                clip["avatar_id"] = ANCHOR_AVATAR_ID
+                clip["voice_id"] = ANCHOR_VOICE_ID
             video_id = _create_avatar_video(
                 api_key,
                 clip["avatar_id"],
                 clip["voice_id"],
-                clip["script"].strip(),
+                (clip.get("script") or "").strip(),
                 clip["title"],
+                audio_url=audio_url,
             )
             clip["video_id"] = video_id
             clip["status"] = "processing"
@@ -1003,6 +1234,10 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
             clip["error"] = str(exc)[:400]
             warnings.append(f"{clip['role']}: {clip['error']}")
             _log("heygen_clip_fail", role=clip["role"], desk=clip.get("desk"), error=clip["error"])
+            _log_model_error(
+                "avatar",
+                f"role={clip.get('role')} desk={clip.get('desk')} voice={clip.get('voice_id')} {clip['error']}",
+            )
         persist()
         return clip
 
@@ -1038,6 +1273,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
                 "avatar_id": ANCHOR_AVATAR_ID,
                 "voice_id": ANCHOR_VOICE_ID,
                 "script": intro,
+                "audio_path": scripts.get("intro_audio") or "",
                 "title": f"GRO News intro {task_id[:8]}",
             }
         )
@@ -1060,6 +1296,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
                 "avatar_id": ANCHOR_AVATAR_ID,
                 "voice_id": ANCHOR_VOICE_ID,
                 "script": handoff,
+                "audio_path": reporter.get("handoff_audio") or "",
                 "title": f"GRO News handoff {name} {task_id[:8]}",
             }
         )
@@ -1076,6 +1313,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
             )
             clips.append(failed)
             warnings.append(f"reporter {name}: {failed['error']}")
+            _log_model_error("avatar", f"reporter={name} desk={desk} {failed['error']}")
             persist()
             continue
         if desk not in seen_desks:
@@ -1107,6 +1345,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
                 "avatar_id": ANCHOR_AVATAR_ID,
                 "voice_id": ANCHOR_VOICE_ID,
                 "script": outro,
+                "audio_path": scripts.get("outro_audio") or "",
                 "title": f"GRO News outro {task_id[:8]}",
             }
         )
@@ -1127,6 +1366,7 @@ def generate_video_bulletin(task_id: str, scripts: dict, merge_result, existing_
             _log("heygen_assemble", status="ok", url=state["final_url"])
         except Exception as exc:
             _log("heygen_assemble", status="failed", error=str(exc)[:240])
+            _log_model_error("avatar", f"bulletin assemble failed: {exc}")
     state["status"] = status
     _log(
         "heygen_summary",

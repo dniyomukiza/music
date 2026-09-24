@@ -280,6 +280,19 @@
             }
         }
 
+        #flaskForm,
+        #newsForm,
+        #topicInput,
+        #keyword {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }
+
         .topic-input {
             width: 100%;
             padding: 15px 20px;
@@ -1281,7 +1294,7 @@
 
                 <form method="POST" id="flaskForm" hidden>
                     {{ form.hidden_tag() }}
-                    {{ form.keyword(id="keyword", class="topic-input", autocomplete="off") }}
+                    {{ form.keyword(id="keyword", type="hidden", autocomplete="off") }}
                     <div id="flaskValidationFeedback" class="validation-feedback"></div>
                 </form>
                 
@@ -1315,7 +1328,7 @@
 
                 <!-- JavaScript Form for advanced features -->
                 <form id="newsForm" hidden>
-                    <input type="text" id="topicInput" class="topic-input" autocomplete="off">
+                    <input type="hidden" id="topicInput" autocomplete="off">
                     <div id="validationFeedback" class="validation-feedback"></div>
                     <div id="topicSuggestions" class="topic-suggestions"></div>
                     <div class="topics-display" id="topicsDisplay"></div>

@@ -1158,6 +1158,10 @@ class NewsTopicValidationAgent:
                 
         except Exception as e:
             import traceback
+            print(
+                f"ERROR: model provider=gemini model={getattr(self, '_validation_model', 'unknown')} "
+                f"issue=topic validation failed for {topic!r}: {e}"
+            )
             print(f"🚨 NewsTopicValidationAgent error for '{topic}': {e}")
             traceback.print_exc()
             return False, f"Gemini API error: {e!s} (check keys, model name, and network)."
@@ -2702,31 +2706,30 @@ def _run_heygen_bulletin_thread(app, task_id, scripts, existing_clips=None):
                 print(f"ERROR: Failed to persist HeyGen failure for {task_id}: {persist_exc}")
 
 
-@news_bp.route('/video/<task_id>', methods=['POST'])
-def generate_video_bulletin_route(task_id):
-    """Start a complementary HeyGen video bulletin from saved broadcast scripts."""
+def queue_video_bulletin(task_id):
+    """Start HeyGen for one finished radio bulletin. Returns (payload, http_status)."""
     db_task = get_task_from_db(task_id)
     task = normalize_task_format(db_task)
     if not task:
         with _tasks_lock:
             task = tasks.get(task_id)
     if not task:
-        return jsonify({'error': 'News task not found'}), 404
+        return {'error': 'News task not found'}, 404
     if task.get('status') != 'completed':
-        return jsonify({'error': 'News audio must finish before generating video'}), 400
+        return {'error': 'News audio must finish before generating video'}, 400
 
     result = _task_result(task)
     scripts = result.get('scripts')
     if not scripts or not (scripts.get('intro') or scripts.get('reporters')):
-        return jsonify({
+        return {
             'error': 'No saved scripts on this broadcast. Generate news again, then create the video bulletin.',
             'task_id': task_id,
-        }), 400
+        }, 400
     from glconnect.news_agent import reporter_scripts_block_reason
     script_block = reporter_scripts_block_reason(scripts)
     if script_block:
         print(f"PIPELINE_ABORT task={task_id} video=blocked error={script_block}")
-        return jsonify({'error': script_block, 'task_id': task_id}), 400
+        return {'error': script_block, 'task_id': task_id}, 400
 
     heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
     current_status = heygen.get('status')
@@ -2735,22 +2738,23 @@ def generate_video_bulletin_route(task_id):
         if isinstance(clip, dict) and clip.get('status') == 'completed' and clip.get('url')
     ]
     if current_status in ('queued', 'processing'):
-        return jsonify({
+        return {
             'status': current_status,
             'task_id': task_id,
             'heygen': _public_heygen(heygen, task_id),
             'bumper_url': NEWS_BUMPER_URL,
-        })
+        }, 200
     if current_status == 'completed' and existing_clips:
         from glconnect.heygen_news import bulletin_file_ready, heygen_clips_missing_handoffs
         if not heygen_clips_missing_handoffs(scripts, existing_clips) and bulletin_file_ready(task_id):
-            return jsonify({
+            return {
                 'status': 'completed',
                 'task_id': task_id,
                 'heygen': _public_heygen(heygen, task_id),
                 'bumper_url': NEWS_BUMPER_URL,
-            })
+            }, 200
 
+    print(f"HeyGen video requested manually for task {task_id}")
     queued = {
         'status': 'queued',
         'clips': existing_clips,
@@ -2765,12 +2769,43 @@ def generate_video_bulletin_route(task_id):
         daemon=True,
     )
     thread.start()
-    return jsonify({
+    return {
         'status': 'queued',
         'task_id': task_id,
         'heygen': {'status': 'queued', 'clips': existing_clips, 'final_url': None},
         'bumper_url': NEWS_BUMPER_URL,
-    })
+    }, 200
+
+
+def start_latest_video_bulletin():
+    """Queue video for the newest finished radio bulletin that has scripts."""
+    import json
+    from glconnect.models import NewsTask
+
+    rows = (
+        NewsTask.query.filter_by(status='completed')
+        .order_by(NewsTask.completed_at.desc(), NewsTask.id.desc())
+        .limit(15)
+        .all()
+    )
+    for row in rows:
+        try:
+            result = json.loads(row.result) if isinstance(row.result, str) else (row.result or {})
+        except (TypeError, ValueError):
+            continue
+        scripts = result.get('scripts') if isinstance(result, dict) else None
+        if isinstance(scripts, dict) and (scripts.get('intro') or scripts.get('reporters')):
+            return queue_video_bulletin(row.task_id)
+    return {
+        'error': 'No finished radio bulletin with scripts was found. Generate radio news first.',
+    }, 404
+
+
+@news_bp.route('/video/<task_id>', methods=['POST'])
+def generate_video_bulletin_route(task_id):
+    """Start a complementary HeyGen video bulletin from saved broadcast scripts."""
+    payload, status = queue_video_bulletin(task_id)
+    return jsonify(payload), status
 
 
 def _news_bot_ingest_token():
@@ -4299,6 +4334,7 @@ def run_transcription(task_id, audio_file_path, filename):
         gc.collect()
         
     except Exception as e:
+        print(f"ERROR: model provider=gemini model={NEWS_GEMINI_MODEL} issue=transcription failed: {e}")
         print(f"Transcription error: {e}")
         with _tasks_lock:
             tasks[task_id]['status'] = 'failed'

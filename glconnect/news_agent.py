@@ -191,6 +191,12 @@ def _clip_trace_text(value, limit=300):
     return text
 
 
+def log_model_error(provider: str, model: str, issue: str) -> None:
+    """Print a container-log line when a news model call fails."""
+    detail = _clip_trace_text(issue, 400) or "unknown"
+    print(f"ERROR: model provider={provider} model={model or 'unknown'} issue={detail}")
+
+
 class NewsPipelineTrace:
     """Structured breadcrumb trail for one news broadcast run."""
 
@@ -480,7 +486,7 @@ def _gemini_generate_text(prompt: str, generation_config=None) -> str:
                     "error": "empty_response",
                     "detail": f"{model_name} returned empty text",
                 })
-                print(f"DEBUG: Gemini text failed model={model_name}: empty text")
+                log_model_error("gemini", model_name, "empty text")
                 break
             except Exception as exc:
                 last_error = exc
@@ -491,7 +497,7 @@ def _gemini_generate_text(prompt: str, generation_config=None) -> str:
                     "error": classified,
                     "detail": _clip_trace_text(exc, 240),
                 })
-                print(f"DEBUG: Gemini text failed model={model_name}: {classified}: {exc}")
+                log_model_error("gemini", model_name, f"{classified}: {exc}")
                 if attempt == 0 and classified == "quota_exhausted":
                     delay = _quota_retry_seconds(exc)
                     if delay:
@@ -506,6 +512,11 @@ def _gemini_generate_text(prompt: str, generation_config=None) -> str:
         "error": _classify_model_error(last_error),
         "detail": _clip_trace_text(last_error, 240),
     }
+    log_model_error(
+        "gemini",
+        "none",
+        f"all models failed: {_classify_model_error(last_error)}: {last_error}",
+    )
     raise last_error or RuntimeError("No Gemini model produced text")
 
 # TTS credentials will be loaded when needed
@@ -736,10 +747,14 @@ def _xai_tts_bytes(text: str, voice_id: str = "") -> bytes:
 
     api_key = _xai_api_key()
     if not api_key:
-        raise RuntimeError("XAI_API_KEY is not configured for the news anchor")
+        issue = "XAI_API_KEY is not configured for the news anchor"
+        log_model_error("xai", "tts", issue)
+        raise RuntimeError(issue)
     spoken = " ".join((text or "").split())
     if not spoken:
-        raise RuntimeError("News script is empty")
+        issue = "News script is empty"
+        log_model_error("xai", "tts", issue)
+        raise RuntimeError(issue)
     chosen_voice = _normalize_xai_voice_id(voice_id)
     response = requests.post(
         XAI_TTS_URL,
@@ -757,12 +772,18 @@ def _xai_tts_bytes(text: str, voice_id: str = "") -> bytes:
     )
     if not response.ok:
         detail = (response.text or "").strip()[:240]
-        raise RuntimeError(f"xAI TTS failed ({response.status_code}): {detail}")
+        issue = f"voice={chosen_voice} xAI TTS failed ({response.status_code}): {detail}"
+        log_model_error("xai", "tts", issue)
+        raise RuntimeError(issue)
     content_type = (response.headers.get("Content-Type") or "").lower()
     if "json" in content_type:
-        raise RuntimeError(f"xAI TTS returned JSON instead of audio: {(response.text or '')[:240]}")
+        issue = f"voice={chosen_voice} xAI TTS returned JSON instead of audio: {(response.text or '')[:240]}"
+        log_model_error("xai", "tts", issue)
+        raise RuntimeError(issue)
     if len(response.content) < 64:
-        raise RuntimeError("xAI TTS returned empty audio")
+        issue = f"voice={chosen_voice} xAI TTS returned empty audio"
+        log_model_error("xai", "tts", issue)
+        raise RuntimeError(issue)
     return response.content
 
 
@@ -800,6 +821,35 @@ def archive_first_voice_sample(gender: str, desk: str, source_path: str, name: s
     shutil.copyfile(source_path, dest)
     print(f"DEBUG: Saved first voice sample for {label}: {dest}")
     return True
+
+
+def _archive_radio_takes_for_video(task_id, scripts: dict) -> None:
+    """Keep the spoken radio takes so the TV anchor can use the anchor voice."""
+    if not task_id or not isinstance(scripts, dict):
+        return
+    safe = re.sub(r"[^A-Za-z0-9_-]", "", str(task_id))
+    if not safe:
+        return
+    dest_dir = os.path.join("glconnect", "static", "news_video", "radio", safe)
+    os.makedirs(dest_dir, exist_ok=True)
+
+    def copy_take(source_name: str, dest_name: str) -> str:
+        source = os.path.join(_AUDIO_DIR, source_name)
+        if not os.path.isfile(source) or os.path.getsize(source) == 0:
+            return ""
+        dest = os.path.join(dest_dir, dest_name)
+        shutil.copyfile(source, dest)
+        return dest
+
+    scripts["intro_audio"] = copy_take("intro_audio.mp3", "intro.mp3")
+    scripts["outro_audio"] = copy_take("outro_audio.mp3", "outro.mp3")
+    for index, row in enumerate(scripts.get("reporters") or []):
+        if isinstance(row, dict):
+            row["handoff_audio"] = copy_take(f"transition_audio_{index}.mp3", f"handoff_{index}.mp3")
+    print(
+        f"DEBUG: Archived radio takes for video intro={bool(scripts.get('intro_audio'))} "
+        f"outro={bool(scripts.get('outro_audio'))}"
+    )
 
 
 def _run_direct_tts_phase(
@@ -982,9 +1032,10 @@ def text_to_speech(text: str, output_filename: str, voice_name: str, speaking_ra
         return {"audio_filepath": full_path}
     except Exception as e:
         import traceback
-        print(
-            f"TTS_FAILURE segment={output_filename!r} voice={voice_name!r} "
-            f"exception_type={type(e).__name__} message={e!s}"
+        log_model_error(
+            "xai",
+            "tts",
+            f"segment={output_filename} voice={voice_name} {type(e).__name__}: {e}",
         )
         traceback.print_exc()
         # Instead of returning an error string, raise the exception to be handled by the calling function
@@ -2814,6 +2865,7 @@ def _narrate_prepared_broadcast(
             trace,
         )
     trace.stage("tts", backend=_tts_backend, segments=len(reporter_segments))
+    _archive_radio_takes_for_video(task_id, persisted_scripts)
 
     gc.collect()
 
