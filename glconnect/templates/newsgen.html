@@ -2961,7 +2961,8 @@
                 });
                 return;
             }
-            const playlist = [bumper, ...clips.map(clip => clip.url), bumper];
+            const opener = '/routes2/news/bumper/tvsweeper.mp4';
+            const playlist = [opener, ...clips.map(clip => clip.url), bumper];
             let index = 0;
             player.style.display = 'block';
             const playAt = () => {

@@ -400,8 +400,9 @@ def _broadcast_result_record(output, audio_file_path, summary):
             record['scripts'] = output['scripts']
         if output.get('topics'):
             record['topics'] = output['topics']
-        if output.get('heygen'):
-            record['heygen'] = output['heygen']
+        video = output.get('video') if isinstance(output.get('video'), dict) else None
+        if video:
+            record['video'] = video
     return record
 
 
@@ -420,7 +421,7 @@ def _public_heygen(heygen, task_id=None):
         })
     final_url = heygen.get('final_url')
     if task_id:
-        from glconnect.heygen_news import bulletin_file_ready, bulletin_file_url
+        from glconnect.grok_news import bulletin_file_ready, bulletin_file_url
         if bulletin_file_ready(task_id):
             final_url = bulletin_file_url(task_id)
     public = {
@@ -433,9 +434,17 @@ def _public_heygen(heygen, task_id=None):
     return public
 
 
+def _stored_video(result):
+    video = result.get('video') if isinstance(result, dict) else None
+    if isinstance(video, dict) and video:
+        return video
+    heygen = result.get('heygen') if isinstance(result, dict) else None
+    return heygen if isinstance(heygen, dict) else {}
+
+
 def completed_news_payload(task_id, task, audio_file, summary):
     result = _task_result(task)
-    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
+    video = _public_heygen(_stored_video(result), task_id)
     return {
         'status': 'completed',
         'task_id': task_id,
@@ -443,7 +452,8 @@ def completed_news_payload(task_id, task, audio_file, summary):
         'summary': summary,
         'topics': task.get('topics') or result.get('topics'),
         'has_scripts': bool(result.get('scripts')),
-        'heygen': _public_heygen(heygen, task_id),
+        'video': video,
+        'heygen': video,
         'bumper_url': NEWS_BUMPER_URL,
     }
 
@@ -2630,12 +2640,12 @@ def serve_audio(filename):
     return "Audio file not found", 404
 
 
-def _grojingle_path():
-    filename = 'grojingle.mp4'
+def _video_bumper_path(filename):
     candidates = [
         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'video', filename),
         os.path.join(os.getcwd(), 'video', filename),
         f'/usr/src/appdir/video/{filename}',
+        f'/liqfolder/video/{filename}',
         os.path.abspath(os.path.join('video', filename)),
     ]
     for path in candidates:
@@ -2646,12 +2656,12 @@ def _grojingle_path():
 
 @news_bp.route('/bumper/<filename>')
 def serve_news_bumper(filename):
-    """Serve the GRO News video bumper (grojingle.mp4 only)."""
-    if filename != 'grojingle.mp4':
+    """Serve a GRO News video bumper."""
+    if filename not in ('grojingle.mp4', 'tvsweeper.mp4'):
         return "Bumper not found", 404
-    path = _grojingle_path()
+    path = _video_bumper_path(filename)
     if not path:
-        print("ERROR: video/grojingle.mp4 not found")
+        print(f"ERROR: video/{filename} not found")
         return "Bumper not found", 404
     return send_file(path, mimetype='video/mp4', conditional=True)
 
@@ -2659,7 +2669,7 @@ def serve_news_bumper(filename):
 @news_bp.route('/bulletin/<task_id>.mp4')
 def serve_news_bulletin_mp4(task_id):
     """Serve the combined GRO News video bulletin MP4."""
-    from glconnect.heygen_news import bulletin_mp4_path
+    from glconnect.grok_news import bulletin_mp4_path
 
     try:
         path = bulletin_mp4_path(task_id)
@@ -2677,8 +2687,8 @@ def serve_news_bulletin_mp4(task_id):
     )
 
 
-def _run_heygen_bulletin_thread(app, task_id, scripts, existing_clips=None):
-    from glconnect.heygen_news import generate_video_bulletin
+def _run_video_bulletin_thread(app, task_id, scripts):
+    from glconnect.grok_news import generate_video_bulletin
 
     with app.app_context():
         try:
@@ -2686,28 +2696,28 @@ def _run_heygen_bulletin_thread(app, task_id, scripts, existing_clips=None):
                 task_id,
                 scripts,
                 lambda patch: merge_news_task_result(task_id, patch),
-                existing_clips=existing_clips,
             )
         except Exception as exc:
-            print(f"ERROR: HeyGen bulletin thread failed for {task_id}: {exc}")
+            print(f"ERROR: Grok bulletin thread failed for {task_id}: {exc}")
             try:
                 result = merge_news_task_result(task_id, {})
-                heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
-                warnings = list(heygen.get('warnings') or [])
+                video = _stored_video(result)
+                warnings = list(video.get('warnings') or [])
                 warnings.append(str(exc)[:400])
                 merge_news_task_result(task_id, {
-                    'heygen': {
+                    'video': {
+                        'provider': 'grok',
                         'status': 'failed',
-                        'clips': heygen.get('clips') or [],
+                        'clips': video.get('clips') or [],
                         'warnings': warnings,
                     }
                 })
             except Exception as persist_exc:
-                print(f"ERROR: Failed to persist HeyGen failure for {task_id}: {persist_exc}")
+                print(f"ERROR: Failed to persist Grok video failure for {task_id}: {persist_exc}")
 
 
 def queue_video_bulletin(task_id):
-    """Start HeyGen for one finished radio bulletin. Returns (payload, http_status)."""
+    """Start a Grok video for one finished radio bulletin. Returns (payload, http_status)."""
     db_task = get_task_from_db(task_id)
     task = normalize_task_format(db_task)
     if not task:
@@ -2731,48 +2741,50 @@ def queue_video_bulletin(task_id):
         print(f"PIPELINE_ABORT task={task_id} video=blocked error={script_block}")
         return {'error': script_block, 'task_id': task_id}, 400
 
-    heygen = result.get('heygen') if isinstance(result.get('heygen'), dict) else {}
-    current_status = heygen.get('status')
-    existing_clips = [
-        clip for clip in (heygen.get('clips') or [])
-        if isinstance(clip, dict) and clip.get('status') == 'completed' and clip.get('url')
-    ]
-    if current_status in ('queued', 'processing'):
+    video = _stored_video(result)
+    current_status = video.get('status')
+    public = _public_heygen(video, task_id)
+    if video.get('provider') == 'grok' and current_status in ('queued', 'processing'):
         return {
             'status': current_status,
             'task_id': task_id,
-            'heygen': _public_heygen(heygen, task_id),
+            'video': public,
+            'heygen': public,
             'bumper_url': NEWS_BUMPER_URL,
         }, 200
-    if current_status == 'completed' and existing_clips:
-        from glconnect.heygen_news import bulletin_file_ready, heygen_clips_missing_handoffs
-        if not heygen_clips_missing_handoffs(scripts, existing_clips) and bulletin_file_ready(task_id):
+    if video.get('provider') == 'grok' and current_status == 'completed':
+        from glconnect.grok_news import bulletin_file_ready
+        if bulletin_file_ready(task_id):
             return {
                 'status': 'completed',
                 'task_id': task_id,
-                'heygen': _public_heygen(heygen, task_id),
+                'video': public,
+                'heygen': public,
                 'bumper_url': NEWS_BUMPER_URL,
             }, 200
 
-    print(f"HeyGen video requested manually for task {task_id}")
+    print(f"Grok video requested manually for task {task_id}")
     queued = {
+        'provider': 'grok',
         'status': 'queued',
-        'clips': existing_clips,
+        'clips': [],
         'warnings': [],
         'started_at': datetime.utcnow().isoformat(),
     }
-    merge_news_task_result(task_id, {'heygen': queued})
+    merge_news_task_result(task_id, {'video': queued})
     app = current_app._get_current_object()
     thread = threading.Thread(
-        target=_run_heygen_bulletin_thread,
-        args=(app, task_id, scripts, existing_clips),
+        target=_run_video_bulletin_thread,
+        args=(app, task_id, scripts),
         daemon=True,
     )
     thread.start()
+    public = {'status': 'queued', 'clips': [], 'final_url': None}
     return {
         'status': 'queued',
         'task_id': task_id,
-        'heygen': {'status': 'queued', 'clips': existing_clips, 'final_url': None},
+        'video': public,
+        'heygen': public,
         'bumper_url': NEWS_BUMPER_URL,
     }, 200
 
@@ -2803,7 +2815,7 @@ def start_latest_video_bulletin():
 
 @news_bp.route('/video/<task_id>', methods=['POST'])
 def generate_video_bulletin_route(task_id):
-    """Start a complementary HeyGen video bulletin from saved broadcast scripts."""
+    """Start a Grok video bulletin from saved broadcast scripts."""
     payload, status = queue_video_bulletin(task_id)
     return jsonify(payload), status
 

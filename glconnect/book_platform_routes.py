@@ -5226,7 +5226,7 @@ def admin_books():
 @book_bp.route('/admin/news-video', methods=['POST'])
 @login_required
 def admin_generate_video_news():
-    """Start HeyGen video from the latest finished radio bulletin."""
+    """Start a Grok video from the latest finished radio bulletin."""
     if current_user.role != 'admin':
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('book_platform.marketplace'))
