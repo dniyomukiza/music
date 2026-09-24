@@ -16,13 +16,13 @@ satmix = playlist("/liqfolder/eleven.m3u")
 eleven = playlist("/liqfolder/eleven.m3u")
 
 # Daily GLC News (raw MP3, single/once only — never playlist/.m3u).
-# TEST slots (Pacific, TZ=America/Los_Angeles): 7:30–8:00 PM and 8:30–9:00 PM.
-# Switch back to 11:00 AM / 6:00 PM Pacific when testing is done.
+# Container TZ is America/Los_Angeles: 11:00–11:30 AM and 6:00–6:30 PM Pacific.
 # Separate once() per window so each slot plays the bulletin once, then music resumes.
 # Fallible: if final_news_broadcast.mp3 is missing, the slot is skipped and jingles/songs stay on.
+# request.dynamic resolves the file when the window opens, so a replaced MP3 is today's bulletin.
 news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
-news_morning = once(single(news_path))
-news_evening = once(single(news_path))
+news_morning = once(request.dynamic(id="glc_news_morning", {request.create(news_path)}))
+news_evening = once(request.dynamic(id="glc_news_evening", {request.create(news_path)}))
 
 # Song, then jingle, then song, then jingle.
 music = rotate(weights=[1, 1], [songs, jingles])
@@ -31,12 +31,12 @@ music = fallback([music, default])
 # === Add top-of-the-hour clock jingle (skipped during the news window) ===
 music = add([music, switch([({ 0m0s }, clock)])])
 
-# TEST news windows (Pacific): 7:30–8:00 PM and 8:30–9:00 PM.
+# News windows (Pacific): 11:00–11:30 AM and 6:00–6:30 PM.
 # track_sensitive=false starts each bulletin on time; after it ends, music resumes until the window closes.
 radio = fallback(track_sensitive=false, [
   switch(track_sensitive=false, [
-    ({ 19h30m-20h0m }, news_morning),
-    ({ 20h30m-21h0m }, news_evening)
+    ({ 11h0m-11h30m }, news_morning),
+    ({ 18h0m-18h30m }, news_evening)
   ]),
   music
 ])

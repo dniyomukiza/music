@@ -1796,6 +1796,24 @@ def cleanup_intermediate_audio_files(final_audio_path: str) -> None:
     except Exception as e:
         print(f"DEBUG: Cleanup function error: {e}")
 
+def _drop_stale_news_files(audio_dir: str, keep: str) -> None:
+    """Remove older timestamped bulletins so the radio path is the only copy."""
+    keep_name = os.path.basename(keep)
+    try:
+        names = os.listdir(audio_dir)
+    except OSError:
+        return
+    for name in names:
+        if name == keep_name or name.startswith("."):
+            continue
+        if name.startswith("final_news_broadcast") and name.endswith(".mp3"):
+            try:
+                os.remove(os.path.join(audio_dir, name))
+                print(f"DEBUG: Removed stale bulletin {name}")
+            except OSError as exc:
+                print(f"DEBUG: Could not remove stale bulletin {name}: {exc}")
+
+
 def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "final_news_broadcast.mp3") -> dict:
     """
     Memory-efficient audio combination using FFmpeg instead of loading all files into RAM.
@@ -1824,8 +1842,13 @@ def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "fi
             
             concat_file = f.name
         
-        # Use FFmpeg to combine files efficiently - put in static audio directory
-        output_path = os.path.join(os.getcwd(), "glconnect", "static", "audio", output_filename)
+        # Write beside the live file, then replace it. Liquidsoap keeps playing
+        # yesterday's bulletin if a new MP3 is saved under a different name.
+        audio_dir = os.path.join(os.getcwd(), "glconnect", "static", "audio")
+        os.makedirs(audio_dir, exist_ok=True)
+        final_name = os.path.basename(output_filename) or "final_news_broadcast.mp3"
+        output_path = os.path.join(audio_dir, final_name)
+        staging_path = os.path.join(audio_dir, ".final_news_broadcast.writing.mp3")
         
         # Build dynamic FFmpeg command based on actual file paths
         cmd = ['ffmpeg', '-y']  # -y to overwrite output file
@@ -1861,7 +1884,7 @@ def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "fi
             '-b:a', '128k',
             '-ar', '44100',
             '-ac', '2',
-            output_path
+            staging_path
         ])
         
         print(f"DEBUG: FFmpeg command: {' '.join(cmd)}")
@@ -1882,7 +1905,9 @@ def combine_audio_files_ffmpeg(file_paths: list[str], output_filename: str = "fi
         os.unlink(concat_file)
         
         if result.returncode == 0:
-            print(f"DEBUG: FFmpeg audio combination successful: {output_path}")
+            os.replace(staging_path, output_path)
+            _drop_stale_news_files(audio_dir, keep=output_path)
+            print(f"DEBUG: FFmpeg audio combination replaced live bulletin: {output_path}")
             return {"combined_audio_filepath": output_path}
         else:
             print(f"ERROR: FFmpeg failed - {result.stderr}")
@@ -2841,19 +2866,14 @@ def _narrate_prepared_broadcast(
     except Exception:
         pass
 
-    audio_files = glob.glob("glconnect/static/audio/final_news_broadcast_*.mp3")
-    if not audio_files:
-        exact_file = "glconnect/static/audio/final_news_broadcast.mp3"
+    # The live radio path is the file we just replaced, not an older timestamped copy.
+    latest_audio = combined_path if combined_path and os.path.exists(combined_path) else ""
+    if not latest_audio:
+        exact_file = os.path.join("glconnect", "static", "audio", "final_news_broadcast.mp3")
         if os.path.exists(exact_file):
-            audio_files = [exact_file]
+            latest_audio = exact_file
 
-    if not audio_files:
-        current_dir_files = glob.glob("final_news_broadcast*.mp3")
-        if current_dir_files:
-            audio_files = current_dir_files
-
-    if audio_files:
-        latest_audio = max(audio_files, key=os.path.getctime)
+    if latest_audio:
         print(f"DEBUG: Found audio file: {latest_audio}")
 
         if os.path.exists(latest_audio):
