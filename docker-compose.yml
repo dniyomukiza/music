@@ -119,7 +119,7 @@ services:
     # Image entrypoint is already /app/liquidsoap — pass script path only (see Docker Hub phasecorex/liquidsoap).
     command: /liqfolder/scripts/main.liq
     environment:
-     - TZ=America/New_York
+     - TZ=America/Los_Angeles
     restart: unless-stopped
     mem_limit: 384M
     mem_reservation: 128M
