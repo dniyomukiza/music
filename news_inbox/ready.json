@@ -1,50 +1,50 @@
 {
   "source": "newsroom-agent",
   "anchor": {
-    "intro": "{TIMECHECK} Welcome to GLC News. Ahead: Alexandria Ocasio-Cortez on an all-or-nothing twenty twenty-eight decision, Melania Trump set to ring the New York Stock Exchange opening bell, Meta's Muse A.I. agent expands shopping checkouts, and Apple puts an A.I. pendant on hold while studying a screenless fitness band.",
-    "outro": "Thanks Mark for that report. That wraps this GLC News bulletin. Thank you for listening."
+    "intro": "{TIMECHECK} Welcome to GLC News. Ahead: Western leaders push for global A.I. controls, Spanish patrols lose ground to cocaine speedboats, Bentley unveils its first electric S.U.V., and England captain Harry Kane eyes the N.F.L. as a placekicker.",
+    "outro": "Thanks Ernest for that report. That wraps this GLC News bulletin. Thank you for listening."
   },
   "reporters": [
     {
       "reporter": "Edith",
       "category": "politics",
-      "handoff": "First, Edith on Alexandria Ocasio-Cortez and twenty twenty-eight.",
+      "handoff": "First, Edith with two stories, starting with that A.I. control push.",
       "stories": [
         {
-          "topic": "AOC says she would be done if she runs and loses in 2028",
-          "script": "Representative Alexandria Ocasio-Cortez told the New York Times that if she runs in the twenty twenty-eight cycle, for the House, the Senate, or the White House, and does not win, she would be finished in elected office. She called it very all or nothing, and said she is not opposed to that outcome, but any campaign would have to make it worth it. The New York Post reports she has not decided whether to seek the presidency or a Senate seat, and expects to choose after the twenty twenty-six midterms while focusing first on winning a House majority."
+          "topic": "Western leaders push global AI controls",
+          "script": "A group of Western presidents and prime ministers is leading a new push for global controls on artificial intelligence, the Wall Street Journal reports. The effort is being framed like nuclear arms treaties from the Atomic Era, with leaders arguing that A.I. risks need coordinated limits rather than a patchwork of national rules. The Journal says the club is trying to set norms on safety, testing, and deployment before the technology races further ahead of regulation."
+        },
+        {
+          "topic": "Spanish patrols losing fight to cocaine speedboats",
+          "bridge": "Also,",
+          "script": "Spanish patrols are losing a battle against drug-smuggling speedboats that outrun authorities and deliver cocaine by the ton, according to the Wall Street Journal. One captain ordered a retreat, saying they are going to kill us, as faster boats and heavier loads overwhelm coastal enforcement. The Journal describes a cat-and-mouse fight where smugglers keep upgrading engines while patrol crews face deadly risk and limited options to stop them."
         }
       ],
       "signoff": "I am Edith, for GLC News."
     },
     {
-      "reporter": "Isabella",
-      "category": "finance",
-      "handoff": "Thanks Edith. Isabella next, at the New York Stock Exchange.",
-      "stories": [
-        {
-          "topic": "Melania Trump to ring NYSE opening bell and launch IMPERIA",
-          "script": "First lady Melania Trump is scheduled Wednesday to ring the opening bell at the New York Stock Exchange. Coverage from the White House schedule and the New York Post says she will also headline the I.M.P.E.R.I.A. Summit from the exchange, launching an invite-only network for female chief executives and senior C-suite leaders focused on economic influence and collaboration. The appearance falls in a busy United Nations General Assembly week that also includes events tied to the Chinese state visit."
-        }
-      ],
-      "signoff": "I am Isabella, for GLC News."
-    },
-    {
       "reporter": "Mark",
       "category": "tech",
-      "handoff": "Thanks Isabella. Mark has two tech stories, starting with Meta's Muse.",
+      "handoff": "Thanks Edith. Mark next, on Bentley's first electric S.U.V.",
       "stories": [
         {
-          "topic": "Meta Muse adds Shopify and PayPal agentic checkout",
-          "script": "Meta's Muse personal A.I. agent is expanding into agentic shopping. MarketWatch and P.Y.M.N.T.S. report Shopify is enabling Shop Pay checkout so Muse can complete purchases across Shopify stores, and PayPal says customers will be able to shop and check out through Muse using PayPal. Meta launched Muse earlier this month as a personal assistant in its own app and WhatsApp. Executives frame the deals as giving users wider store access while keeping merchants on familiar checkout rails."
-        },
-        {
-          "topic": "Apple postpones AI pendant; studies screenless fitness band",
-          "bridge": "Also,",
-          "script": "Bloomberg's Mark Gurman reports Apple has postponed work on an A.I. pendant with a camera, conceived as a pin or necklace that would feed visual context and microphone input to Siri. Prototypes were described as roughly AirTag sized in aluminum and glass. Separately, Apple is exploring a Whoop-like screenless fitness band with continuous health monitoring. That project is still early, with any launch unlikely before twenty twenty-eight if Apple moves ahead, MacRumors and Bloomberg say."
+          "topic": "Bentley unveils Torcal first EV SUV",
+          "script": "Bentley has unveiled its first electric vehicle, the Torcal S.U.V., with a starting price of about two hundred eighteen thousand dollars. Reuters and Bentley say the Torcal is rated for roughly three hundred seventy-three miles of W.L.T.P. range on a one hundred thirteen kilowatt-hour battery, and can charge from ten to eighty percent in about sixteen minutes. The luxury brand is pitching the Torcal as the start of its shift away from combustion toward a full electric lineup."
         }
       ],
       "signoff": "I am Mark, for GLC News."
+    },
+    {
+      "reporter": "Ernest",
+      "category": "sports",
+      "handoff": "Thanks Mark. Ernest on Harry Kane and the N.F.L.",
+      "stories": [
+        {
+          "topic": "Harry Kane exploring NFL placekicker path",
+          "script": "England captain Harry Kane says he plans to seriously explore joining the N.F.L. as a placekicker after his soccer career, and that a move could sit alongside Major League Soccer. Coverage from E.S.P.N. and R.T.E. says Kane has not set a timeline, but he framed American football kicking as a real option once his club and international days wind down. For now he remains focused on Bayern Munich and England, while leaving the door open to a second act in the States."
+        }
+      ],
+      "signoff": "I am Ernest, for GLC News."
     }
   ]
 }
