@@ -1,23 +1,18 @@
 {
   "source": "newsroom-agent",
   "anchor": {
-    "intro": "{TIMECHECK} Welcome to GLC News. Ahead: Western leaders push for global A.I. controls, Spanish patrols lose ground to cocaine speedboats, Bentley unveils its first electric S.U.V., and England captain Harry Kane eyes the N.F.L. as a placekicker.",
+    "intro": "{TIMECHECK} Welcome to GLC News. Ahead: Bill Gates warns A.I. could drive events that cause a billion deaths, the Trump administration's third-country deportations, Apple hit with a five point seven billion dollar haptic patent verdict, and Harry Kane scores again for England.",
     "outro": "Thanks Ernest for that report. That wraps this GLC News bulletin. Thank you for listening."
   },
   "reporters": [
     {
       "reporter": "Edith",
       "category": "politics",
-      "handoff": "First, Edith with two stories, starting with that A.I. control push.",
+      "handoff": "First, Edith on those third-country deportations.",
       "stories": [
         {
-          "topic": "Western leaders push global AI controls",
-          "script": "A group of Western presidents and prime ministers is leading a new push for global controls on artificial intelligence, the Wall Street Journal reports. The effort is being framed like nuclear arms treaties from the Atomic Era, with leaders arguing that A.I. risks need coordinated limits rather than a patchwork of national rules. The Journal says the club is trying to set norms on safety, testing, and deployment before the technology races further ahead of regulation."
-        },
-        {
-          "topic": "Spanish patrols losing fight to cocaine speedboats",
-          "bridge": "Also,",
-          "script": "Spanish patrols are losing a battle against drug-smuggling speedboats that outrun authorities and deliver cocaine by the ton, according to the Wall Street Journal. One captain ordered a retreat, saying they are going to kill us, as faster boats and heavier loads overwhelm coastal enforcement. The Journal describes a cat-and-mouse fight where smugglers keep upgrading engines while patrol crews face deadly risk and limited options to stop them."
+          "topic": "Trump admin third-country deportations",
+          "script": "The Trump administration has deported more than twenty-five thousand people to at least twenty-eight countries even though those countries are not their own, the Washington Post reports. Coverage tied to France twenty-four and Forbidden Stories says migrants were sent to third countries under arrangements that stretch beyond traditional returns. Rights groups and legal advocates call the practice a sharp expansion of third-country removals."
         }
       ],
       "signoff": "I am Edith, for GLC News."
@@ -25,11 +20,16 @@
     {
       "reporter": "Mark",
       "category": "tech",
-      "handoff": "Thanks Edith. Mark next, on Bentley's first electric S.U.V.",
+      "handoff": "Thanks Edith. Mark with two tech stories, starting with Bill Gates.",
       "stories": [
         {
-          "topic": "Bentley unveils Torcal first EV SUV",
-          "script": "Bentley has unveiled its first electric vehicle, the Torcal S.U.V., with a starting price of about two hundred eighteen thousand dollars. Reuters and Bentley say the Torcal is rated for roughly three hundred seventy-three miles of W.L.T.P. range on a one hundred thirteen kilowatt-hour battery, and can charge from ten to eighty percent in about sixteen minutes. The luxury brand is pitching the Torcal as the start of its shift away from combustion toward a full electric lineup."
+          "topic": "Bill Gates on AI risk and regulation",
+          "script": "Bill Gates says artificial intelligence is certainly powerful enough to drive events that cause a billion deaths, and he is urging stronger government regulation beyond industry self-policing. In comments carried by N.B.C. Meet the Press, The Verge, and Business Insider, Gates argued that voluntary rules are not enough as the technology scales. He framed the risk as extreme enough that governments need clearer limits on how advanced systems are built and deployed."
+        },
+        {
+          "topic": "Apple $5.7B haptic patent verdict",
+          "bridge": "Also,",
+          "script": "A United States jury has ordered Apple to pay a record five point seven billion dollars after finding the company used patented haptic technology in iPhones and Apple Watches. Reuters, Bloomberg Law, and Law three sixty report the verdict as one of the largest patent awards against a tech giant. Apple is expected to appeal, while the plaintiffs say the win validates years of litigation over touch feedback patents."
         }
       ],
       "signoff": "I am Mark, for GLC News."
@@ -37,11 +37,11 @@
     {
       "reporter": "Ernest",
       "category": "sports",
-      "handoff": "Thanks Mark. Ernest on Harry Kane and the N.F.L.",
+      "handoff": "Thanks Mark. Ernest on Harry Kane.",
       "stories": [
         {
-          "topic": "Harry Kane exploring NFL placekicker path",
-          "script": "England captain Harry Kane says he plans to seriously explore joining the N.F.L. as a placekicker after his soccer career, and that a move could sit alongside Major League Soccer. Coverage from E.S.P.N. and R.T.E. says Kane has not set a timeline, but he framed American football kicking as a real option once his club and international days wind down. For now he remains focused on Bayern Munich and England, while leaving the door open to a second act in the States."
+          "topic": "Harry Kane scores for England",
+          "script": "Harry Kane scored for England, lifting his tally to seven goals and eight goal contributions across club and country this season. Fabrizio Romano reported the strike live as England played. Kane remains England captain and continues to lead the line for Bayern Munich while stacking early-season numbers for club and country."
         }
       ],
       "signoff": "I am Ernest, for GLC News."
