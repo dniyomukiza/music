@@ -1,7 +1,7 @@
 # Sub-2:00 Radio Music Prompt Bank
 ### Built to out-hook TuneIn — every track front-loads the chorus, no wasted seconds
 
-**Universal rule applied to every prompt below:** hook hits by 0:08–0:12, no intro fluff, no instrumental breakdowns, chorus repeats at least twice, cold or fast fade ending, total runtime 1:30–1:58. This is the "micro-single" format — built for algorithmic radio, TikTok crossover, and drive-time rotation.
+**Universal rule applied to every prompt below:** a lead singer sings real lyrics. GLC Radio does not play instrumentals, beat-only tracks, or vocal-chop-only tracks. Hook hits by 0:08–0:12, no intro fluff, no instrumental breakdowns, chorus repeats at least twice, cold or fast fade ending, total runtime 1:30–1:58. This is the "micro-single" format — built for algorithmic radio, TikTok crossover, and drive-time rotation.
 
 ---
 
@@ -55,6 +55,15 @@
 **12. "Highlife Revival" Afrobeats**
 > Afrobeats with highlife guitar licks, 100 BPM, bright palm-wine guitar riff as the main hook (instrumental and vocal versions layered), warm horns, joyful call-and-response chorus, runtime 1:55, nostalgic but modern production
 
+**29. "Sunlit Chorus" Afropop (2:30)**
+> Afropop, 104 BPM, female lead singer singing real English and Pidgin lyrics about a sunny weekend, bright guitar, log drum, shakers, sung chorus by 0:10, chorus repeats twice, call-and-response ad-libs under the singer, runtime 2:30, polished radio mix
+
+**30. "Gold Guitar" Afropop (2:30)**
+> Afropop with highlife guitar, 100 BPM, male lead singer singing real English lyrics, palm-wine guitar hook, warm horns, sung chorus by 0:08, chorus repeats twice, runtime 2:30, joyful radio mix
+
+**31. "Open Air" Afropop (2:30)**
+> Dance afropop, 108 BPM, female lead singer singing real English lyrics about dancing outside at night, rolling bass, log drum, bright synth hook, sung chorus by 0:10, chorus repeats twice, runtime 2:30, festival-radio mix
+
 ---
 
 ## ELECTRO / ELECTRO-POP
@@ -65,6 +74,12 @@
 **14. "Vocal-Chop Anthem" Electro**
 > Future-pop/electro, 130 BPM, entire hook built from chopped and pitched vocal syllables (no full lyric line until the second chorus), pulsing sidechained bass, euphoric synth lead, runtime 1:50, big-room polish scaled down for radio
 
+**27. "Early Drop" Electro (2:30)**
+> Electro-pop, 126 BPM, female lead singer singing real English lyrics, the sung chorus hits in the first 10 seconds, bright arpeggios, sidechained bass, one short verse, second chorus closes the song, runtime 2:30, festival-radio mix
+
+**28. "Neon Verse" Electro (2:30)**
+> Electro, 130 BPM, male lead singer singing real English lyrics, pulsing sidechained bass, euphoric synth lead, sung chorus by 0:10, chorus repeats twice, runtime 2:30, big-room polish scaled for radio
+
 ---
 
 ## ZOUK
@@ -74,6 +89,12 @@
 
 **16. "Zouk-R&B Fusion"**
 > Zouk fused with contemporary R&B, 90 BPM, zouk's rolling bassline under an R&B vocal hook, airy female vocals with runs, minimal percussion break at 0:45 for a 2-second breath before the final chorus, runtime 1:50
+
+**25. "Midnight Zouk" (2:30)**
+> Modern zouk, 96 BPM, male lead singer singing real French and English lyrics about a late dance, syncopated zouk drums, warm synth pads, guitar arpeggio, sung chorus by 0:10, chorus repeats twice, runtime 2:30, Caribbean-French radio mix
+
+**26. "Zouk Current" (2:30)**
+> Modern zouk fused with R&B, 92 BPM, female lead singer singing real English and French lyrics, rolling zouk bass, airy vocal runs, guitar arpeggio hook, sung chorus by 0:08, chorus repeats twice, runtime 2:30, sensual radio-clean mix
 
 ---
 
@@ -103,12 +124,24 @@
 
 ---
 
+## TECHNO (weekend openers, 2:30–3:00)
+
+**23. "Friday Lights" Techno**
+> Vocal techno, 128 BPM, female lead singer singing real English lyrics about Friday night in the city, four-on-the-floor kick, warm rolling bass, bright chord stab, sung chorus hook enters by 0:10, chorus repeats twice, one short verse, no instrumental section longer than four bars, no vocal chops instead of a singer, runtime 2:45, polished weekend radio mix
+
+**24. "Saturday Open" Techno**
+> Peak-time vocal techno, 132 BPM, male lead singer singing real English lyrics about the Saturday night floor filling up, driving kick, sidechained bass, rising synth hook, sung chorus by 0:08, chorus repeats twice, second chorus bigger, no beat-only stretch, no shouted drum-word instead of singing, runtime 2:50, club-radio weekend mix
+
+---
+
 ## Formula Cheat Sheet (reuse this to generate more)
 
 ```
-[Genre + sub-genre/fusion] + [BPM] + [Where/how the hook enters — aim for under 10 seconds] +
+[Genre + sub-genre/fusion] + [BPM] + [Lead singer: female or male, singing real lyrics] +
+[Where/how the hook enters — aim for under 10 seconds] +
 [2–3 signature instruments] + [Vocal style/language] + [Structural twist — beat switch, inverted
 drop, a cappella open, etc.] + [Runtime 1:30–1:58] + [Production descriptor]
+Never request an instrumental. Never say "no vocals."
 ```
 
 **Why these skew "ahead of the curve":**

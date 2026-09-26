@@ -19,7 +19,9 @@ COMPOSE_URL = "https://api.elevenlabs.io/v1/music"
 MODEL_ID = "music_v2_5"
 
 UNIVERSAL = (
-    "Original radio single, no copyrighted melody or lyrics, no named artists. "
+    "Original radio song with a lead singer, no copyrighted melody or lyrics, no named artists. "
+    "The singer is present from the first hook and sings real lyrics. "
+    "Not instrumental. No beat-only track. No vocal-chop-only track. "
     "Hook hits by 8 to 12 seconds, no intro fluff, no long instrumental breakdown, "
     "chorus repeats at least twice, cold or fast fade ending, radio-clean lyrics, "
     "polished commercial mastering."
@@ -255,7 +257,7 @@ def compose(api_key: str, prompt: str, music_length_ms: int, force_instrumental:
         "prompt": prompt,
         "music_length_ms": music_length_ms,
         "model_id": MODEL_ID,
-        "force_instrumental": force_instrumental,
+        "force_instrumental": False,
     }
     response = requests.post(
         COMPOSE_URL,
@@ -292,96 +294,132 @@ def compose(api_key: str, prompt: str, music_length_ms: int, force_instrumental:
     raise RuntimeError(f"HTTP {response.status_code}: {body}")
 
 
-# Three distinct 2:00 techno tracks. Prompts stay raw so the pop-radio wrapper
-# does not turn them into verse-chorus songs.
+# Weekend vocal techno from video/radio-music-prompts.md items 23 and 24.
 BATCH_4 = [
     {
         "id": "15",
-        "title": "GLC Radio - Detroit Night Drive",
+        "title": "GLC Radio - Friday Lights",
         "genre": "techno",
-        "vocal": "instrumental",
-        "force_instrumental": True,
-        "raw": True,
-        "music_length_ms": 120000,
+        "vocal": "female",
+        "music_length_ms": 165000,
         "prompt": (
-            "Original Detroit techno, 126 BPM, instrumental, two minutes. "
-            "Dry 909 kick, closed hat on the offbeats, clap on beats 2 and 4, "
-            "deep rolling bassline, repeating minor-seventh chord stab every two bars. "
-            "Hypnotic and soulful, late-night highway mood. "
-            "The groove is already moving in the first bar. "
-            "A slow filter sweep opens the chords around 0:45 and again near 1:20. "
-            "No vocals, no lyrics, no pop chorus, no supersaw drop, no trap hats, "
-            "no breakdown longer than four bars. Cold ending at two minutes. "
-            "No named artists, no copyrighted melody."
+            "Vocal techno, 128 BPM, female lead singer singing real English lyrics about "
+            "Friday night in the city, four-on-the-floor kick, warm rolling bass, bright chord stab, "
+            "sung chorus hook enters by 10 seconds, chorus repeats twice, one short verse, "
+            "no instrumental section longer than four bars, runtime 2:45, polished weekend radio mix."
         ),
     },
     {
         "id": "16",
-        "title": "GLC Radio - Concrete Peak",
+        "title": "GLC Radio - Saturday Open",
         "genre": "techno",
-        "vocal": "chant",
-        "force_instrumental": False,
-        "raw": True,
-        "music_length_ms": 120000,
+        "vocal": "male",
+        "music_length_ms": 170000,
         "prompt": (
-            "Original peak-time industrial techno, 138 BPM, two minutes. "
-            "Hard dry kick, rumbling sub, metallic closed hats, industrial percussion. "
-            "Dark warehouse room, no melody lead. "
-            "One short rhythmic shout, a single word used like a drum, repeating on the offbeat. "
-            "No sung lyrics, no verse, no pop hook, no electro-house drop. "
-            "Tension comes from opening the filter and adding a ride pattern after 0:40, "
-            "then stripping back to kick and sub for eight bars before the full pattern returns. "
-            "Relentless until a cold cut at two minutes. "
-            "No named artists, no copyrighted melody."
-        ),
-    },
-    {
-        "id": "17",
-        "title": "GLC Radio - Acid Circuit",
-        "genre": "techno",
-        "vocal": "instrumental",
-        "force_instrumental": True,
-        "raw": True,
-        "music_length_ms": 120000,
-        "prompt": (
-            "Original acid techno, 132 BPM, instrumental, two minutes. "
-            "909 kick and clap, shuffling closed hats, one resonant synthesizer bass line "
-            "that squelches and evolves by cutoff and resonance only. "
-            "Hypnotic 8-bar loop, no chord progression, no vocals, no lyrics. "
-            "The acid line is present from the first bar, starts muted, "
-            "opens fully by 0:30, peaks in resonance around 1:10, then settles. "
-            "No big-room drop, no pop chorus, no guitar, no trap. "
-            "Fast fade in the last two seconds. "
-            "No named artists, no copyrighted melody."
+            "Peak-time vocal techno, 132 BPM, male lead singer singing real English lyrics about "
+            "the Saturday night floor filling up, driving kick, sidechained bass, rising synth hook, "
+            "sung chorus by 8 seconds, chorus repeats twice, second chorus bigger, "
+            "no beat-only stretch, runtime 2:50, club-radio weekend mix."
         ),
     },
 ]
 
 
+# Zouk and electro from video/radio-music-prompts.md items 25–28. Sung, 2:30 each.
 BATCH_5 = [
     {
-        "id": "18",
-        "title": "GLC Radio - Dub Chamber",
-        "genre": "techno",
-        "vocal": "instrumental",
-        "force_instrumental": True,
-        "raw": True,
-        "music_length_ms": 120000,
+        "id": "17",
+        "title": "GLC Radio - Midnight Zouk",
+        "genre": "zouk",
+        "vocal": "male",
+        "music_length_ms": 150000,
         "prompt": (
-            "Original dub techno, 122 BPM, instrumental, two minutes. "
-            "Soft four-on-the-floor kick, brushed closed hats, deep sub bass, "
-            "one minor chord stab washed in long delay and plate reverb so the chords bloom and fade. "
-            "Hypnotic, underwater, late-night. The chord and the kick are both present from the first bar. "
-            "Delay feedback swells around 0:40 and again near 1:15, then settles. "
-            "No vocals, no lyrics, no acid squelch, no industrial metal percussion, "
-            "no Detroit soul stabs, no pop chorus, no supersaw drop, no breakdown longer than four bars. "
-            "Cold ending at two minutes. No named artists, no copyrighted melody."
+            "Modern zouk, 96 BPM, male lead singer singing real French and English lyrics "
+            "about a late dance, syncopated zouk drums, warm synth pads, guitar arpeggio, "
+            "sung chorus by 10 seconds, chorus repeats twice, runtime 2:30, Caribbean-French radio mix."
+        ),
+    },
+    {
+        "id": "18",
+        "title": "GLC Radio - Zouk Current",
+        "genre": "zouk",
+        "vocal": "female",
+        "music_length_ms": 150000,
+        "prompt": (
+            "Modern zouk fused with R&B, 92 BPM, female lead singer singing real English and French lyrics, "
+            "rolling zouk bass, airy vocal runs, guitar arpeggio hook, sung chorus by 8 seconds, "
+            "chorus repeats twice, runtime 2:30, sensual radio-clean mix."
+        ),
+    },
+    {
+        "id": "19",
+        "title": "GLC Radio - Early Drop",
+        "genre": "electro",
+        "vocal": "female",
+        "music_length_ms": 150000,
+        "prompt": (
+            "Electro-pop, 126 BPM, female lead singer singing real English lyrics, "
+            "the sung chorus hits in the first 10 seconds, bright arpeggios, sidechained bass, "
+            "one short verse, second chorus closes the song, runtime 2:30, festival-radio mix."
+        ),
+    },
+    {
+        "id": "20",
+        "title": "GLC Radio - Neon Verse",
+        "genre": "electro",
+        "vocal": "male",
+        "music_length_ms": 150000,
+        "prompt": (
+            "Electro, 130 BPM, male lead singer singing real English lyrics, "
+            "pulsing sidechained bass, euphoric synth lead, sung chorus by 10 seconds, "
+            "chorus repeats twice, runtime 2:30, big-room polish scaled for radio."
         ),
     },
 ]
 
 
-BATCHES = {"1": BATCH_1, "2": BATCH_2, "3": BATCH_3, "4": BATCH_4, "5": BATCH_5}
+# Afropop from video/radio-music-prompts.md items 29–31. Sung, 2:30 each.
+BATCH_6 = [
+    {
+        "id": "21",
+        "title": "GLC Radio - Sunlit Chorus",
+        "genre": "afropop",
+        "vocal": "female",
+        "music_length_ms": 150000,
+        "prompt": (
+            "Afropop, 104 BPM, female lead singer singing real English and Pidgin lyrics "
+            "about a sunny weekend, bright guitar, log drum, shakers, sung chorus by 10 seconds, "
+            "chorus repeats twice, call-and-response ad-libs under the singer, runtime 2:30, polished radio mix."
+        ),
+    },
+    {
+        "id": "22",
+        "title": "GLC Radio - Gold Guitar",
+        "genre": "afropop",
+        "vocal": "male",
+        "music_length_ms": 150000,
+        "prompt": (
+            "Afropop with highlife guitar, 100 BPM, male lead singer singing real English lyrics, "
+            "palm-wine guitar hook, warm horns, sung chorus by 8 seconds, chorus repeats twice, "
+            "runtime 2:30, joyful radio mix."
+        ),
+    },
+    {
+        "id": "23",
+        "title": "GLC Radio - Open Air",
+        "genre": "afropop",
+        "vocal": "female",
+        "music_length_ms": 150000,
+        "prompt": (
+            "Dance afropop, 108 BPM, female lead singer singing real English lyrics about "
+            "dancing outside at night, rolling bass, log drum, bright synth hook, "
+            "sung chorus by 10 seconds, chorus repeats twice, runtime 2:30, festival-radio mix."
+        ),
+    },
+]
+
+
+BATCHES = {"1": BATCH_1, "2": BATCH_2, "3": BATCH_3, "4": BATCH_4, "5": BATCH_5, "6": BATCH_6}
 
 
 def main() -> int:
@@ -395,18 +433,15 @@ def main() -> int:
     for item in batch:
         filename = f"{item['title']}.mp3"
         dest = OUT_DIR / filename
-        if item.get("raw"):
-            prompt = item["prompt"]
-        else:
-            prompt = f"{UNIVERSAL} {item['vocal']} lead. {item['prompt']}"
+        vocal = (item.get("vocal") or "").strip().lower()
+        if item.get("force_instrumental") or vocal in {"", "instrumental", "none"}:
+            print(f"  SKIPPED: {item['title']} has no singer")
+            results.append({"title": item["title"], "genre": item["genre"], "ok": False, "error": "no singer"})
+            continue
+        prompt = f"{UNIVERSAL} {item['vocal']} lead singer. {item['prompt']}"
         print(f"[{item['id']}] {item['genre']} / {item['vocal']} — {item['title']}")
         try:
-            audio = compose(
-                api_key,
-                prompt,
-                item["music_length_ms"],
-                force_instrumental=bool(item.get("force_instrumental")),
-            )
+            audio = compose(api_key, prompt, item["music_length_ms"])
             dest.write_bytes(audio)
             append_playlist(filename)
             print(f"  saved {dest.name} ({len(audio)} bytes)")
