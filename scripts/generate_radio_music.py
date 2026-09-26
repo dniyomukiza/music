@@ -245,7 +245,7 @@ def append_playlist(filename: str) -> None:
         handle.write(f"{prefix}{line}\n")
 
 
-def compose(api_key: str, prompt: str, music_length_ms: int) -> bytes:
+def compose(api_key: str, prompt: str, music_length_ms: int, force_instrumental: bool = False) -> bytes:
     headers = {
         "xi-api-key": api_key,
         "Content-Type": "application/json",
@@ -255,7 +255,7 @@ def compose(api_key: str, prompt: str, music_length_ms: int) -> bytes:
         "prompt": prompt,
         "music_length_ms": music_length_ms,
         "model_id": MODEL_ID,
-        "force_instrumental": False,
+        "force_instrumental": force_instrumental,
     }
     response = requests.post(
         COMPOSE_URL,
@@ -287,12 +287,101 @@ def compose(api_key: str, prompt: str, music_length_ms: int) -> bytes:
             suggestion = str(data.get("prompt_suggestion") or "")
     if status == "bad_prompt" and suggestion:
         print(f"  bad_prompt, retrying with official suggestion")
-        return compose(api_key, suggestion, music_length_ms)
+        return compose(api_key, suggestion, music_length_ms, force_instrumental=force_instrumental)
 
     raise RuntimeError(f"HTTP {response.status_code}: {body}")
 
 
-BATCHES = {"1": BATCH_1, "2": BATCH_2, "3": BATCH_3}
+# Three distinct 2:00 techno tracks. Prompts stay raw so the pop-radio wrapper
+# does not turn them into verse-chorus songs.
+BATCH_4 = [
+    {
+        "id": "15",
+        "title": "GLC Radio - Detroit Night Drive",
+        "genre": "techno",
+        "vocal": "instrumental",
+        "force_instrumental": True,
+        "raw": True,
+        "music_length_ms": 120000,
+        "prompt": (
+            "Original Detroit techno, 126 BPM, instrumental, two minutes. "
+            "Dry 909 kick, closed hat on the offbeats, clap on beats 2 and 4, "
+            "deep rolling bassline, repeating minor-seventh chord stab every two bars. "
+            "Hypnotic and soulful, late-night highway mood. "
+            "The groove is already moving in the first bar. "
+            "A slow filter sweep opens the chords around 0:45 and again near 1:20. "
+            "No vocals, no lyrics, no pop chorus, no supersaw drop, no trap hats, "
+            "no breakdown longer than four bars. Cold ending at two minutes. "
+            "No named artists, no copyrighted melody."
+        ),
+    },
+    {
+        "id": "16",
+        "title": "GLC Radio - Concrete Peak",
+        "genre": "techno",
+        "vocal": "chant",
+        "force_instrumental": False,
+        "raw": True,
+        "music_length_ms": 120000,
+        "prompt": (
+            "Original peak-time industrial techno, 138 BPM, two minutes. "
+            "Hard dry kick, rumbling sub, metallic closed hats, industrial percussion. "
+            "Dark warehouse room, no melody lead. "
+            "One short rhythmic shout, a single word used like a drum, repeating on the offbeat. "
+            "No sung lyrics, no verse, no pop hook, no electro-house drop. "
+            "Tension comes from opening the filter and adding a ride pattern after 0:40, "
+            "then stripping back to kick and sub for eight bars before the full pattern returns. "
+            "Relentless until a cold cut at two minutes. "
+            "No named artists, no copyrighted melody."
+        ),
+    },
+    {
+        "id": "17",
+        "title": "GLC Radio - Acid Circuit",
+        "genre": "techno",
+        "vocal": "instrumental",
+        "force_instrumental": True,
+        "raw": True,
+        "music_length_ms": 120000,
+        "prompt": (
+            "Original acid techno, 132 BPM, instrumental, two minutes. "
+            "909 kick and clap, shuffling closed hats, one resonant synthesizer bass line "
+            "that squelches and evolves by cutoff and resonance only. "
+            "Hypnotic 8-bar loop, no chord progression, no vocals, no lyrics. "
+            "The acid line is present from the first bar, starts muted, "
+            "opens fully by 0:30, peaks in resonance around 1:10, then settles. "
+            "No big-room drop, no pop chorus, no guitar, no trap. "
+            "Fast fade in the last two seconds. "
+            "No named artists, no copyrighted melody."
+        ),
+    },
+]
+
+
+BATCH_5 = [
+    {
+        "id": "18",
+        "title": "GLC Radio - Dub Chamber",
+        "genre": "techno",
+        "vocal": "instrumental",
+        "force_instrumental": True,
+        "raw": True,
+        "music_length_ms": 120000,
+        "prompt": (
+            "Original dub techno, 122 BPM, instrumental, two minutes. "
+            "Soft four-on-the-floor kick, brushed closed hats, deep sub bass, "
+            "one minor chord stab washed in long delay and plate reverb so the chords bloom and fade. "
+            "Hypnotic, underwater, late-night. The chord and the kick are both present from the first bar. "
+            "Delay feedback swells around 0:40 and again near 1:15, then settles. "
+            "No vocals, no lyrics, no acid squelch, no industrial metal percussion, "
+            "no Detroit soul stabs, no pop chorus, no supersaw drop, no breakdown longer than four bars. "
+            "Cold ending at two minutes. No named artists, no copyrighted melody."
+        ),
+    },
+]
+
+
+BATCHES = {"1": BATCH_1, "2": BATCH_2, "3": BATCH_3, "4": BATCH_4, "5": BATCH_5}
 
 
 def main() -> int:
@@ -306,10 +395,18 @@ def main() -> int:
     for item in batch:
         filename = f"{item['title']}.mp3"
         dest = OUT_DIR / filename
-        prompt = f"{UNIVERSAL} {item['vocal']} lead. {item['prompt']}"
+        if item.get("raw"):
+            prompt = item["prompt"]
+        else:
+            prompt = f"{UNIVERSAL} {item['vocal']} lead. {item['prompt']}"
         print(f"[{item['id']}] {item['genre']} / {item['vocal']} — {item['title']}")
         try:
-            audio = compose(api_key, prompt, item["music_length_ms"])
+            audio = compose(
+                api_key,
+                prompt,
+                item["music_length_ms"],
+                force_instrumental=bool(item.get("force_instrumental")),
+            )
             dest.write_bytes(audio)
             append_playlist(filename)
             print(f"  saved {dest.name} ({len(audio)} bytes)")
