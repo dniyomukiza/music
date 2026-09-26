@@ -124,22 +124,25 @@ class DatabaseOptimizer:
 
         if price_range:
             pr = (price_range or "").strip()
-            if pr == "0-5":
-                query = query.filter(
-                    or_(BookProject.price.is_(None), BookProject.price <= 5)
-                )
-            elif pr == "5-10":
-                query = query.filter(
-                    and_(BookProject.price.isnot(None), BookProject.price > 5, BookProject.price <= 10)
-                )
-            elif pr == "10-20":
-                query = query.filter(
-                    and_(BookProject.price.isnot(None), BookProject.price > 10, BookProject.price <= 20)
-                )
-            elif pr == "20+":
-                query = query.filter(
-                    and_(BookProject.price.isnot(None), BookProject.price > 20)
-                )
+
+            def _price_column_in_range(column):
+                if pr == "0-5":
+                    return or_(column.is_(None), column <= 5)
+                if pr == "5-10":
+                    return and_(column.isnot(None), column > 5, column <= 10)
+                if pr == "10-20":
+                    return and_(column.isnot(None), column > 10, column <= 20)
+                if pr == "20+":
+                    return and_(column.isnot(None), column > 20)
+                return None
+
+            price_match = _price_column_in_range(BookProject.price)
+            audio_match = _price_column_in_range(BookProject.audiobook_price)
+            print_match = and_(
+                BookProject.print_enabled == True,
+                _price_column_in_range(BookProject.print_price),
+            )
+            query = query.filter(or_(price_match, audio_match, print_match))
 
         st = (search_term or "").strip()
         if st:

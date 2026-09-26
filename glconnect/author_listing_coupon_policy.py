@@ -21,6 +21,7 @@ COUPON_STATUS_AVAILABLE = "available"
 COUPON_STATUS_REDEEMED = "redeemed"
 COUPON_STATUS_EXPIRED = "expired"
 
+# Default ebook/print platform maintenance fee (overridable via env)
 BASE_PLATFORM_FEE_PERCENT = float(os.getenv("INK_BASE_PLATFORM_FEE_PERCENT", "10"))
 COUPON_PLATFORM_FEE_PERCENT = float(os.getenv("INK_COUPON_PLATFORM_FEE_PERCENT", "5"))
 MIN_PLATFORM_FEE_PERCENT = float(os.getenv("INK_MIN_PLATFORM_FEE_PERCENT", "3"))
@@ -31,7 +32,7 @@ PURCHASE_FORMAT_TO_LISTING = {
     "digital": LISTING_FORMAT_EBOOK,
     "audiobook": LISTING_FORMAT_AUDIOBOOK,
     "print": LISTING_FORMAT_PRINT,
-    "bundle": None,  # weighted combo
+    "bundle": None,  # flat bundle fee when 2+ formats
 }
 
 
@@ -39,8 +40,40 @@ class ListingCouponError(Exception):
     """Invalid earn/redeem operation."""
 
 
-def _clamp_fee_percent(percent: float) -> float:
-    return max(MIN_PLATFORM_FEE_PERCENT, min(BASE_PLATFORM_FEE_PERCENT, float(percent)))
+def _aware_utc(dt: datetime | None) -> datetime | None:
+    """Normalize DB datetimes (often naive UTC) for safe comparison."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _utc_now_naive() -> datetime:
+    """Naive UTC for SQLAlchemy filters on timezone-less DateTime columns."""
+    return _utc_now().replace(tzinfo=None)
+
+
+def _base_fee_ceiling_for_listing(listing_format: str) -> float:
+    """Default platform maintenance fee % for a listing format (coupon cannot raise above this)."""
+    from glconnect.platform_fee_policy import marketplace_platform_fee_percent_for
+
+    if listing_format == LISTING_FORMAT_AUDIOBOOK:
+        return marketplace_platform_fee_percent_for("audiobook")
+    if listing_format == LISTING_FORMAT_PRINT:
+        return marketplace_platform_fee_percent_for("print")
+    if listing_format == LISTING_FORMAT_EBOOK:
+        return marketplace_platform_fee_percent_for("digital")
+    return BASE_PLATFORM_FEE_PERCENT
+
+
+def _clamp_fee_percent(percent: float, ceiling: float | None = None) -> float:
+    ceil = BASE_PLATFORM_FEE_PERCENT if ceiling is None else float(ceiling)
+    return max(MIN_PLATFORM_FEE_PERCENT, min(ceil, float(percent)))
 
 
 def _fee_override_attr(listing_format: str) -> str:
@@ -61,51 +94,50 @@ def _format_label(fmt: str) -> str:
 
 def effective_platform_fee_percent(book: Any, purchase_or_listing_format: str) -> float:
     """
-    Resolve platform fee % for a purchase/sale format on this book.
-    Enforces MIN_PLATFORM_FEE_PERCENT floor.
+    Resolve platform maintenance fee % for a purchase/sale format on this book.
+
+    Defaults: ebook/print 10%, audiobook 30%, bundle of 2+ formats 20%.
+    Per-format coupon overrides may lower a single-format fee (floor MIN_PLATFORM_FEE_PERCENT).
     """
+    from glconnect.platform_fee_policy import (
+        MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE,
+        marketplace_platform_fee_percent_for,
+    )
+
     fmt = (purchase_or_listing_format or "digital").lower().strip()
-    if fmt.startswith("combo:"):
+    if fmt.startswith("combo:") or fmt == "bundle":
         from glconnect.book_purchase_format import formats_from_purchase_format
 
-        fmts = formats_from_purchase_format(fmt)
-        if not fmts:
-            return BASE_PLATFORM_FEE_PERCENT
-        portions = _format_base_portions(book, fmts)
-        total_base = sum(portions.values())
-        if total_base <= 0:
-            return BASE_PLATFORM_FEE_PERCENT
-        weighted = sum(
-            portions[k] * _single_format_fee_percent(book, k) for k in portions
-        ) / total_base
-        return round(_clamp_fee_percent(weighted), 2)
+        fmts = formats_from_purchase_format(fmt if fmt.startswith("combo:") else "bundle")
+        if len(fmts) >= 2:
+            return MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE
+        if len(fmts) == 1:
+            return _purchase_key_fee_percent(book, fmts[0])
+        return marketplace_platform_fee_percent_for("digital")
 
     listing_fmt = PURCHASE_FORMAT_TO_LISTING.get(fmt)
-    if listing_fmt is None and fmt == "bundle":
-        from glconnect.book_purchase_format import formats_from_purchase_format
-
-        fmts = formats_from_purchase_format("bundle")
-        portions = _format_base_portions(book, fmts)
-        total_base = sum(portions.values())
-        if total_base <= 0:
-            return BASE_PLATFORM_FEE_PERCENT
-        weighted = sum(
-            portions[k] * _single_format_fee_percent(book, k) for k in portions
-        ) / total_base
-        return round(_clamp_fee_percent(weighted), 2)
-
     if listing_fmt:
         return _single_format_fee_percent(book, listing_fmt)
-    return BASE_PLATFORM_FEE_PERCENT
+    return marketplace_platform_fee_percent_for(fmt)
+
+
+def _purchase_key_fee_percent(book: Any, purchase_key: str) -> float:
+    listing_fmt = PURCHASE_FORMAT_TO_LISTING.get(purchase_key)
+    if listing_fmt:
+        return _single_format_fee_percent(book, listing_fmt)
+    from glconnect.platform_fee_policy import marketplace_platform_fee_percent_for
+
+    return marketplace_platform_fee_percent_for(purchase_key)
 
 
 def _single_format_fee_percent(book: Any, listing_format: str) -> float:
+    ceiling = _base_fee_ceiling_for_listing(listing_format)
     attr = _fee_override_attr(listing_format)
     if book and attr:
         override = getattr(book, attr, None)
         if override is not None:
-            return _clamp_fee_percent(float(override))
-    return BASE_PLATFORM_FEE_PERCENT
+            return _clamp_fee_percent(float(override), ceiling=ceiling)
+    return ceiling
 
 
 def _format_base_portions(book: Any, formats: List[str]) -> Dict[str, float]:
@@ -122,7 +154,7 @@ def _format_base_portions(book: Any, formats: List[str]) -> Dict[str, float]:
     has_print = "print" in fmts
 
     if has_digital and has_audio:
-        bundle_total = (d + a) * 0.8
+        bundle_total = d + a
         if d + a > 0:
             portions["digital"] = bundle_total * (d / (d + a))
             portions["audiobook"] = bundle_total * (a / (d + a))
@@ -140,7 +172,8 @@ def _format_base_portions(book: Any, formats: List[str]) -> Dict[str, float]:
 
 
 def royalty_fraction_for_fee_percent(platform_fee_percent: float) -> float:
-    return (100.0 - _clamp_fee_percent(platform_fee_percent)) / 100.0
+    fee = max(0.0, min(100.0, float(platform_fee_percent)))
+    return (100.0 - fee) / 100.0
 
 
 def issue_coupon_on_format_publish(book: Any, earned_from_format: str) -> Optional[Any]:
@@ -162,7 +195,7 @@ def issue_coupon_on_format_publish(book: Any, earned_from_format: str) -> Option
     if existing:
         return existing
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now()
     coupon = AuthorFormatListingCoupon(
         author_id=book.author_id,
         book_project_id=book.id,
@@ -188,13 +221,13 @@ def expire_stale_coupons_for_book(book_id: int) -> None:
     from glconnect import db
     from glconnect.book_platform_models import AuthorFormatListingCoupon
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now()
     rows = AuthorFormatListingCoupon.query.filter_by(
         book_project_id=book_id,
         status=COUPON_STATUS_AVAILABLE,
     ).all()
     for row in rows:
-        if row.expires_at and row.expires_at < now:
+        if row.expires_at and _aware_utc(row.expires_at) < now:
             row.status = COUPON_STATUS_EXPIRED
 
 
@@ -207,7 +240,7 @@ def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
         return []
 
     expire_stale_coupons_for_book(book.id)
-    now = datetime.now(timezone.utc)
+    now = _utc_now()
     rows = (
         AuthorFormatListingCoupon.query.filter_by(
             book_project_id=book.id,
@@ -220,7 +253,7 @@ def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
     for row in rows:
         if row.earned_from_format == target:
             continue
-        if row.expires_at and row.expires_at < now:
+        if row.expires_at and _aware_utc(row.expires_at) < now:
             row.status = COUPON_STATUS_EXPIRED
             continue
         out.append(row)
@@ -230,7 +263,7 @@ def list_redeemable_coupons(book: Any, target_format: str) -> List[Any]:
 def count_available_coupons_for_author(author_id: int) -> int:
     from glconnect.book_platform_models import AuthorFormatListingCoupon
 
-    now = datetime.now(timezone.utc)
+    now = _utc_now_naive()
     return (
         AuthorFormatListingCoupon.query.filter_by(
             author_id=author_id,
@@ -251,7 +284,7 @@ def coupons_summary_for_books(books: List[Any]) -> Dict[int, Dict[str, Any]]:
     if not books:
         return {}
     book_ids = [b.id for b in books]
-    now = datetime.now(timezone.utc)
+    now = _utc_now_naive()
     rows = (
         AuthorFormatListingCoupon.query.filter(
             AuthorFormatListingCoupon.book_project_id.in_(book_ids),
@@ -314,14 +347,15 @@ def redeem_coupon(coupon_id: int, book: Any, target_format: str) -> Any:
             f"Use a coupon earned from a different format (not {_format_label(target)})."
         )
 
-    now = datetime.now(timezone.utc)
-    if coupon.expires_at and coupon.expires_at < now:
+    now = _utc_now()
+    if coupon.expires_at and _aware_utc(coupon.expires_at) < now:
         coupon.status = COUPON_STATUS_EXPIRED
         db.session.flush()
         raise ListingCouponError("This coupon has expired.")
 
     fee_after = _clamp_fee_percent(
-        float(coupon.platform_fee_percent_after or COUPON_PLATFORM_FEE_PERCENT)
+        float(coupon.platform_fee_percent_after or COUPON_PLATFORM_FEE_PERCENT),
+        ceiling=_base_fee_ceiling_for_listing(target),
     )
     attr = _fee_override_attr(target)
     if not attr:

@@ -1,13 +1,15 @@
 {# Rich project description editor (CKEditor + media uploads). Requires:
    project_desc_field_id, project_desc_book_id, project_desc_upload_url
-   Optional: project_desc_preview_target (element id for live preview) #}
-<div class="ink-project-desc-editor mb-3" data-ink-editor-field="{{ project_desc_field_id }}">
+   Optional: project_desc_preview_target (element id for live preview)
+   Optional: project_desc_audio_enabled (default true; book settings passes false until published) #}
+{% set _audio_enabled = project_desc_audio_enabled if project_desc_audio_enabled is defined else true %}
+<div class="ink-project-desc-editor mb-3" data-ink-editor-field="{{ project_desc_field_id }}" data-audio-enabled="{{ 'true' if _audio_enabled else 'false' }}">
     {% if show_media_guide is not defined or show_media_guide %}
     <div class="ink-project-desc-guide small text-muted border rounded p-3 mb-2">
         <strong class="d-block mb-1"><i class="fas fa-photo-film me-1" aria-hidden="true"></i>Media in your description</strong>
         <ul class="mb-2 ps-3">
             <li><strong>Images:</strong> {{ media_guide.images }}</li>
-            <li><strong>Audio:</strong> {{ media_guide.audio }}</li>
+            <li><strong>Audio:</strong> {{ media_guide.audio }}{% if not _audio_enabled %} <span class="text-warning">(available after you publish this book)</span>{% endif %}</li>
             <li><strong>Video files:</strong> {{ media_guide.video_files }}</li>
             <li><strong>Video links:</strong> {{ media_guide.video_embeds }}</li>
             <li><strong>Links:</strong> {{ media_guide.links }}</li>
@@ -16,7 +18,8 @@
             <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="image">
                 <i class="fas fa-image me-1"></i> Image
             </button>
-            <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="audio">
+            <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="audio"
+                    {% if not _audio_enabled %}disabled title="Publish this book first to add audio clips"{% endif %}>
                 <i class="fas fa-volume-up me-1"></i> Audio
             </button>
             <button type="button" class="btn btn-outline-secondary ink-project-media-btn" data-media-kind="video">
@@ -117,6 +120,10 @@
     container.querySelectorAll('.ink-project-media-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
             pendingKind = btn.getAttribute('data-media-kind') || 'image';
+            if (pendingKind === 'audio' && container.getAttribute('data-audio-enabled') === 'false') {
+                alert('Publish this book first (check Publish this book below), then you can add audio clips to your description.');
+                return;
+            }
             fileInput.accept = acceptByKind[pendingKind] || acceptByKind.image;
             fileInput.click();
         });

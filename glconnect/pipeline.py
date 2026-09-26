@@ -36,7 +36,7 @@ TV_PROGRAM_LIQ_PREFIX = "/liqfolder/glconnect/static/ytautovid/"
 LEGACY_TV_PROGRAM_VIDEO_PREFIX = "/liqfolder/video/"
 
 _TV_JINGLE_BASENAMES_LOWER = frozenset(
-    ("tvjingle.mp4", "tvjingle2.mp4", "grojingle.mp4")
+    ("tvjingle.mp4", "tvjingle2.mp4", "grojingle.mp4", "tvsweeper.mp4")
 )
 
 

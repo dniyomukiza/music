@@ -37,13 +37,56 @@ def get_webhook_secret():
     ) or os.getenv("STRIPE_WEBHOOK_SECRET")
 
 
+def is_production_runtime() -> bool:
+    """True when the app is not explicitly running in development."""
+    env = (os.getenv("FLASK_ENV") or os.getenv("APP_ENV") or "").strip().lower()
+    if env in ("development", "dev", "local", "test"):
+        return False
+    return True
+
+
 def stripe_connect_allow_platform_only() -> bool:
-    """If true, book checkout proceeds without Connect (platform receives full charge). Dev-only."""
+    """Dev-only: allow marketplace checkout without Connect (platform receives the charge).
+
+    Always False in production so author funds never settle in the platform
+    operating account (money-transmitter risk).
+    """
+    if is_production_runtime():
+        return False
     return os.getenv("STRIPE_CONNECT_ALLOW_PLATFORM_ONLY", "").strip().lower() in (
         "1",
         "true",
         "yes",
     )
+
+
+def stripe_tax_enabled() -> bool:
+    """True when Stripe Tax should be applied to marketplace Checkout Sessions."""
+    return os.getenv("STRIPE_TAX_ENABLED", "").strip().lower() in ("1", "true", "yes")
+
+
+def apply_stripe_tax_to_checkout_kw(checkout_kw: Dict[str, Any]) -> Dict[str, Any]:
+    """Enable Stripe Tax on a Checkout Session kwargs dict when configured.
+
+    Requires billing address collection so tax can be calculated. Does nothing
+    when STRIPE_TAX_ENABLED is off — callers must not claim tax is collected.
+    """
+    if not stripe_tax_enabled():
+        return checkout_kw
+    checkout_kw = dict(checkout_kw)
+    checkout_kw["automatic_tax"] = {"enabled": True}
+    checkout_kw["billing_address_collection"] = "required"
+    # Ensure price_data lines are tax-ready when present.
+    for item in checkout_kw.get("line_items") or []:
+        price_data = item.get("price_data") if isinstance(item, dict) else None
+        if isinstance(price_data, dict) and "tax_behavior" not in price_data:
+            price_data["tax_behavior"] = "exclusive"
+    return checkout_kw
+
+
+def marketplace_requires_author_connect() -> bool:
+    """In production, paid marketplace checkout must use a ready Connect account."""
+    return not stripe_connect_allow_platform_only()
 
 
 def author_needs_stripe_payout_setup(bp_user) -> bool:
@@ -136,6 +179,12 @@ def get_stripe_server_secret_key(app) -> Optional[str]:
 def stripe_secret_configured(app) -> bool:
     """True if a valid sk_... is available via get_stripe_server_secret_key."""
     return get_stripe_server_secret_key(app) is not None
+
+
+def stripe_effective_mode_is_test(app) -> bool:
+    """True when the effective server secret key is Stripe test mode (sk_test_...)."""
+    sk = get_stripe_server_secret_key(app)
+    return bool(sk and sk.startswith("sk_test_"))
 
 
 def process_env_has_stripe_secret() -> bool:

@@ -1,0 +1,104 @@
+<script>
+function glcTermsScrollGate(scrollId, hintId, checkboxSelector) {
+    var scrollEl = document.getElementById(scrollId);
+    if (!scrollEl) return;
+    var hintEl = hintId ? document.getElementById(hintId) : null;
+    var section = scrollEl.closest('.glc-media-terms-section') || scrollEl.parentElement;
+    function update() {
+        var boxes = section ? section.querySelectorAll(checkboxSelector) : [];
+        var needs = scrollEl.scrollHeight > scrollEl.clientHeight + 8;
+        var atBottom = !needs || (scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 8);
+        boxes.forEach(function (cb) {
+            cb.disabled = !atBottom;
+            if (!atBottom) cb.checked = false;
+        });
+        if (hintEl) hintEl.classList.toggle('d-none', atBottom);
+    }
+    scrollEl.addEventListener('scroll', update);
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(update).observe(scrollEl);
+    update();
+}
+
+glcTermsScrollGate('glcArtistTermsScrollContentHub', 'glcArtistTermsHintContentHub', '.glc-artist-term-cb');
+glcTermsScrollGate('glcArtistTermsScrollUploadContentHub', 'glcArtistTermsHintUploadContentHub', '.glc-artist-upload-term-cb');
+glcTermsScrollGate('glcTrackTermsScrollContentHub', 'glcTrackTermsHintContentHub', '.glc-track-term-cb');
+
+function glcArtistTermsChecked(mode) {
+    var suffix = mode === 'Upload' ? 'UploadContentHub' : 'ContentHub';
+    return ['glcMediaTermsAccept', 'glcMediaRightsWarranty', 'glcMediaPlayLicense', 'glcMediaLiabilityWaiver'].every(function (id) {
+        var el = document.getElementById(id + suffix);
+        return el && el.checked;
+    });
+}
+
+function glcTrackTermsChecked() {
+    return ['glcTrackRightsContentHub', 'glcTrackPlayLicenseContentHub', 'glcTrackLiabilityContentHub'].every(function (id) {
+        var el = document.getElementById(id);
+        return el && el.checked;
+    });
+}
+
+function createArtistProfileContentHub() {
+    const artistName = document.getElementById('artistNameInputContentHub').value.trim();
+    const bio = document.getElementById('artistBioInputContentHub').value.trim();
+    const profilePicFile = document.getElementById('artistProfilePicInputContentHub').files[0];
+
+    if (!artistName) return alert('Artist name is required.');
+    if (!glcArtistTermsChecked()) {
+        return alert('Scroll through the GLC Media Artist Agreement and accept all required terms.');
+    }
+    const formData = new FormData();
+    formData.append('artist_name', artistName);
+    formData.append('bio', bio);
+    if (profilePicFile) formData.append('profile_pic', profilePicFile);
+    formData.append('glc_media_terms_accept', 'on');
+    formData.append('glc_media_rights_warranty', 'on');
+    formData.append('glc_media_play_license', 'on');
+    formData.append('glc_media_liability_waiver', 'on');
+
+    fetch('/mybook/music/create-artist-profile', { method: 'POST', body: formData })
+    .then(response => response.json()).then(data => {
+        if (data.success) { alert(data.message); location.reload(); }
+        else { alert(data.message || 'Error creating artist profile.'); }
+    }).catch(() => { alert('Unable to create artist profile.'); });
+}
+
+document.getElementById('artistProfilePicInputContentHub')?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const preview = document.getElementById('profilePicPreviewContentHub');
+    const previewImg = document.getElementById('profilePicPreviewImgContentHub');
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) { previewImg.src = ev.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(file);
+    } else { preview.style.display = 'none'; }
+});
+
+function uploadSongContentHub() {
+    const form = document.getElementById('uploadSongFormContentHub');
+    {% if artist_needs_glc_terms|default(true) %}
+    if (!glcArtistTermsChecked('Upload')) {
+        alert('Scroll through the GLC Media Artist Agreement and accept all required terms.');
+        return;
+    }
+    {% endif %}
+    if (!glcTrackTermsChecked()) {
+        alert('Scroll through the track submission terms and accept all required checkboxes.');
+        return;
+    }
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('uploadSongBtnContentHub');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+
+    fetch('/mybook/music/upload-song', { method: 'POST', body: formData })
+    .then(res => res.json()).then(data => {
+        if (data.success) {
+            alert(data.message); form.reset();
+            document.querySelector('#uploadSongModalContentHub .btn-close')?.click();
+        } else { alert(data.message || 'Error uploading song.'); }
+    })
+    .finally(() => { submitBtn.disabled = false; submitBtn.innerHTML = originalText; });
+}
+</script>

@@ -2,30 +2,47 @@ log.stdout := true
 
 # === Playlists and fallback setup ===
 default = single("/liqfolder/jinglemix.ogg")      # Fallback track
-day = playlist("/liqfolder/mixes.m3u")     # Day (6h–22h): mixes
-night = playlist("/liqfolder/ytauto.m3u")  # Night (22h–6h): downloads (ytauto)
-jingles = playlist("/liqfolder/jingles.m3u")      # Jingles playlist
-clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
-gosp3 = playlist("/liqfolder/gosp3.m3u")
-satmix = playlist("/liqfolder/satmix.m3u")
-# === Time-based switching between day and night playlists ===
-radio = switch([
-  ({ 0w }, gosp3),
-  ({ 6w }, satmix),
-  ({ 7w }, satmix),
-  ({ 6h-22h }, day),    # Day: mixes.m3u
-  ({ 22h-6h }, night),  # Night: ytauto.m3u (downloads)
-  ({ true }, night)  
+# Rotate needs two plain playlists. A switch/fallback child is treated as one
+# continuous source, so jingles never get a turn.
+songs = playlist(id="eleven_songs", reload_mode="watch", mode="normal", "/liqfolder/eleven.m3u")
+jingles = fallback(track_sensitive=true, [
+  playlist(id="radio_jingles", reload_mode="watch", mode="normal", "/liqfolder/jingles.m3u"),
+  single("/liqfolder/jingle.mp3"),
+  single("/liqfolder/jinglemix.ogg")
 ])
-radio = fallback([radio, default])  # Fallback to default if playlists fail
+clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
+gosp3 = playlist("/liqfolder/eleven.m3u")
+satmix = playlist("/liqfolder/eleven.m3u")
+eleven = playlist("/liqfolder/eleven.m3u")
 
-# === Add jingles randomly (1 jingle every 2 songs) ===
-radio = random(weights=[1, 2], [jingles, radio])
+# Daily GLC News (raw MP3, single/once only — never playlist/.m3u).
+# Container TZ is America/Los_Angeles: 11:00–11:30 AM and 6:00–6:30 PM Pacific.
+# Separate once() per window so each slot plays the bulletin once, then music resumes.
+# Fallible: if final_news_broadcast.mp3 is missing, the slot is skipped and jingles/songs stay on.
+# request.dynamic resolves the file when the window opens, so a replaced MP3 is today's bulletin.
+news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
+news_morning = once(request.dynamic(id="glc_news_morning", {request.create(news_path)}))
+news_evening = once(request.dynamic(id="glc_news_evening", {request.create(news_path)}))
 
-# === Add top-of-the-hour clock jingle ===
-radio = add([radio, switch([({ 0m0s }, clock)])])
+# Song, then jingle, then song, then jingle.
+music = rotate(weights=[1, 1], [songs, jingles])
+music = fallback([music, default])
+
+# === Add top-of-the-hour clock jingle (skipped during the news window) ===
+music = add([music, switch([({ 0m0s }, clock)])])
+
+# News windows (Pacific): 11:00–11:30 AM and 6:00–6:30 PM.
+# track_sensitive=false starts each bulletin on time; after it ends, music resumes until the window closes.
+radio = fallback(track_sensitive=false, [
+  switch(track_sensitive=false, [
+    ({ 11h0m-11h30m }, news_morning),
+    ({ 18h0m-18h30m }, news_evening)
+  ]),
+  music
+])
 
 # === Make radio stream safe and create final fallback ===
+radio = fallback([radio, default])
 radio = mksafe(radio)
 
 # Uncomment this if you have a live input stream
@@ -63,4 +80,14 @@ output.icecast(%mp3,
   password="123",
   mount="satmix",
   sat_radio
+)
+
+# === ElevenLabs originals (standalone, not mixed into station day rotation) ===
+eleven_radio = mksafe(eleven)
+output.icecast(%mp3,
+  host="icecast2",
+  port=8000,
+  password="123",
+  mount="eleven",
+  eleven_radio
 )

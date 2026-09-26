@@ -13,25 +13,23 @@ from glconnect.ai_config import AIConfig
 
 SYSTEM_INSTRUCTION = """You are a voice-controlled music assistant for the Ink Studio music dashboard. You provide the same functionality as the UI buttons, but via voice commands.
 
-You have full access to the music database:
-- Artist-uploaded songs (Song table) and YouTube-downloaded songs (DownloadedSong table)
-- User playlists (Playlist table) for logged in users
+You only search and play GLC Radio originals generated with ElevenLabs (static/eleven). Do not look up artist-upload folders or YouTube downloads.
 
 Your tools (use them to fulfill requests):
-1. search_songs(query) - Find songs/artists in the catalog. Always use this first when the user mentions a song or artist.
-2. play_song(song_id or download_id) - Start playback. Use song_id for artist uploads, download_id for YouTube downloads.
-3. add_song_to_playlist(song_id or download_id) - Add to user's playlist. Requires login.
-4. download_song(song_id or download_id) - Get download link for the user to save the file.
+1. search_songs(query) - Find songs/artists in the GLC Radio catalog. Always use this first when the user mentions a song or artist.
+2. play_song(song_id) - Start playback of a GLC Radio original.
+3. add_song_to_playlist(song_id) - Add to user's playlist. Requires login.
+4. download_song(song_id) - Get download link for the user to save the file.
 5. list_my_playlist() - List songs in the user's playlist (requires login).
 
 Voice command examples you should understand:
-- "Play Rockabye" / "Play Rockabye by Clean Bandit" → search_songs then play_song
+- "Play Hyper-Hook Pop" / "Play GLC Radio" → search_songs then play_song
 - "Add X to my playlist" → search_songs then add_song_to_playlist
 - "Download X" / "I want to download X" → search_songs then download_song
 - "What's in my playlist?" / "List my playlist" → list_my_playlist
 - "Find songs by [artist]" / "Search for [song]" → search_songs
 
-When you find songs via search_songs, use the song_id or download_id from the results for play/add/download. Be conversational and confirm actions clearly."""
+When you find songs via search_songs, use the song_id from the results for play/add/download. Be conversational and confirm actions clearly."""
 
 
 def get_tools_for_gemini():
@@ -94,105 +92,20 @@ def get_tools_for_gemini():
 
 
 def search_songs_impl(query: str, base_url: str = "") -> List[Dict[str, Any]]:
-    """
-    Search songs using the same logic as playlist2. Returns list of song dicts.
-    base_url: e.g. 'https://glc.cool' for building absolute URLs.
-    """
-    from glconnect.models import db, Song, Artist, DownloadedSong
-    from glconnect.playlist2 import _approved_songs_filter, get_all_songs_by_artist, check_song_file_exists
-    from flask import url_for
+    """Search ElevenLabs / GLC Radio originals only. Same catalog as /mybook/music."""
+    from glconnect.eleven_catalog import search_eleven_catalog
 
-    query = (query or "").strip().lower()
+    query = (query or "").strip()
     if not query:
         return []
 
-    seen_song_ids = set()
-    seen_song_keys = set()
-    all_songs_data = []
-
-    def add_if_unique(song_data):
-        sid = song_data["id"]
-        skey = f"{(song_data.get('name') or '').lower()}|{(song_data.get('artist') or '').lower()}"
-        if sid in seen_song_ids or skey in seen_song_keys:
-            return
-        seen_song_ids.add(sid)
-        seen_song_keys.add(skey)
-        all_songs_data.append(song_data)
-
-    # Downloaded songs
-    downloads = DownloadedSong.query.filter(
-        db.or_(
-            db.func.lower(DownloadedSong.name).like(f"%{query}%"),
-            db.func.lower(DownloadedSong.artist).like(f"%{query}%")
-        )
-    ).limit(20).all()
-    for d in downloads:
-        name = (d.name or "").strip() or "Untitled Track"
-        artist = d.artist or "Unknown"
-        path = url_for("playlist2.serve_downloaded_song_file", download_id=d.id, _external=True)
-        add_if_unique({
-            "id": 2000000 + d.id,
-            "song_id": None,
-            "download_id": d.id,
-            "name": name,
-            "artist": artist,
-            "path": path,
-            "play_url": path,
-        })
-
-    # Artist exact match
-    artist = Artist.query.filter(db.func.lower(Artist.artist_name) == query).first()
-    if artist:
-        songs_data = get_all_songs_by_artist(artist_id=artist.artist_id, artist_name=artist.artist_name, include_collaborations=True)
-        for s in songs_data:
-            path = s.get("path") or url_for("playlist2.serve_song_file", song_id=s["id"], _external=True)
-            add_if_unique({
-                **s,
-                "play_url": path,
-            })
-        if all_songs_data:
-            return all_songs_data
-
-    # Song name partial match
-    songs = Song.query.filter(db.func.lower(Song.name).like(f"%{query}%")).filter(_approved_songs_filter()).limit(20).all()
-    if songs:
-        first = songs[0]
-        artist_id, artist_name = first.artist_id, first.artist
-        if artist_id:
-            a = Artist.query.get(artist_id)
-            if a:
-                artist_name = a.artist_name
-        if artist_id or artist_name:
-            songs_data = get_all_songs_by_artist(artist_id=artist_id, artist_name=artist_name)
-            for s in songs_data:
-                path = s.get("path") or url_for("playlist2.serve_song_file", song_id=s["id"], _external=True)
-                add_if_unique({**s, "play_url": path})
-            if all_songs_data:
-                return all_songs_data
-
-    # Song.artist partial match
-    songs_artist = Song.query.filter(db.func.lower(Song.artist).like(f"%{query}%")).filter(_approved_songs_filter()).all()
-    for song in songs_artist:
-        if not check_song_file_exists(song):
-            continue
-        artist_name = song.artist or "Unknown"
-        if song.artist_id:
-            a = Artist.query.get(song.artist_id)
-            if a:
-                artist_name = a.artist_name
-        song_name = (song.name or "").strip() or "Untitled Track"
-        path = url_for("playlist2.serve_song_file", song_id=song.id, _external=True)
-        add_if_unique({
-            "id": song.id,
-            "song_id": song.id,
-            "download_id": None,
-            "name": song_name,
-            "artist": artist_name,
-            "path": path,
-            "play_url": path,
-        })
-
-    return all_songs_data
+    results = []
+    prefix = (base_url or "").rstrip("/")
+    for song in search_eleven_catalog(query):
+        path = song.get("path") or ""
+        play_url = f"{prefix}{path}" if prefix and path.startswith("/") else path
+        results.append({**song, "play_url": play_url})
+    return results
 
 
 def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = "") -> Dict[str, Any]:
@@ -249,102 +162,64 @@ def run_agent_turn(user_message: str, user_id: Optional[int], base_url: str = ""
 
         if name == "play_song":
             song_id = args.get("song_id")
-            download_id = args.get("download_id")
             if song_id:
                 from glconnect.models import Song
+                from glconnect.eleven_catalog import is_eleven_song
                 from flask import url_for
                 song = Song.query.get(song_id)
-                if song:
+                if song and is_eleven_song(song):
                     path = url_for("playlist2.serve_song_file", song_id=song_id, _external=True)
                     actions.append({"type": "play", "url": path, "name": song.name or "Track", "artist": song.artist or "Unknown"})
                     return json.dumps({"success": True, "message": f"Playing {song.name or 'track'} by {song.artist or 'Unknown'}"})
-            if download_id:
-                from glconnect.models import DownloadedSong
-                from flask import url_for
-                d = DownloadedSong.query.get(download_id)
-                if d:
-                    path = url_for("playlist2.serve_downloaded_song_file", download_id=download_id, _external=True)
-                    actions.append({"type": "play", "url": path, "name": d.name or "Track", "artist": d.artist or "Unknown"})
-                    return json.dumps({"success": True, "message": f"Playing {d.name or 'track'} by {d.artist or 'Unknown'}"})
-            return json.dumps({"success": False, "message": "Song not found"})
+            return json.dumps({"success": False, "message": "Song not found in the GLC Radio catalog"})
 
         if name == "add_song_to_playlist":
             if not user_id:
                 return json.dumps({"success": False, "message": "Please log in to add songs to your playlist."})
             song_id = args.get("song_id")
-            download_id = args.get("download_id")
-            from glconnect.models import Song, DownloadedSong, Playlist, db
-            from flask_login import current_user
-            if song_id:
-                song = Song.query.get(song_id)
-                if not song:
-                    return json.dumps({"success": False, "message": "Song not found"})
-                if not song.is_approved():
-                    return json.dumps({"success": False, "message": "This song is not available for playlists."})
-                existing = Playlist.query.filter_by(user_id=user_id, song_id=song_id).first()
-                if existing:
-                    return json.dumps({"success": True, "message": f"'{song.name}' is already in your playlist."})
-                db.session.add(Playlist(user_id=user_id, song_id=song.id, download_id=None))
-                db.session.commit()
+            from glconnect.models import db
+            from glconnect.playlist_logic import add_to_playlist_impl
+            success, message, _err = add_to_playlist_impl(db.session, user_id, song_id, None)
+            if success:
                 actions.append({"type": "add_to_playlist", "song_id": song_id, "download_id": None})
-                return json.dumps({"success": True, "message": f"'{song.name}' added to your playlist!"})
-            if download_id:
-                d = DownloadedSong.query.get(download_id)
-                if not d:
-                    return json.dumps({"success": False, "message": "Song not found"})
-                existing = Playlist.query.filter_by(user_id=user_id, download_id=download_id).first()
-                if existing:
-                    return json.dumps({"success": True, "message": f"'{d.name}' is already in your playlist."})
-                db.session.add(Playlist(user_id=user_id, song_id=None, download_id=d.id))
-                db.session.commit()
-                actions.append({"type": "add_to_playlist", "song_id": None, "download_id": download_id})
-                return json.dumps({"success": True, "message": f"'{d.name}' added to your playlist!"})
-            return json.dumps({"success": False, "message": "Provide song_id or download_id"})
+            return json.dumps({"success": success, "message": message})
 
         if name == "list_my_playlist":
             if not user_id:
                 return json.dumps({"success": False, "message": "Please log in to view your playlist."})
-            from glconnect.models import Playlist, Song, Artist, DownloadedSong
+            from glconnect.models import Playlist, Song
+            from glconnect.eleven_catalog import is_eleven_song
             playlist = Playlist.query.filter_by(user_id=user_id).all()
             if not playlist:
                 return json.dumps({"success": True, "count": 0, "songs": [], "message": "Your playlist is empty."})
             out = []
             for entry in playlist:
-                if entry.song_id:
-                    song = Song.query.get(entry.song_id)
-                    if song:
-                        artist_name = song.artist or "Unknown"
-                        if song.artist_id:
-                            a = Artist.query.get(song.artist_id)
-                            if a:
-                                artist_name = a.artist_name
-                        out.append({"name": (song.name or "").strip() or "Untitled", "artist": artist_name, "song_id": song.id, "download_id": None})
-                elif entry.download_id:
-                    d = DownloadedSong.query.get(entry.download_id)
-                    if d:
-                        out.append({"name": (d.name or "").strip() or "Untitled", "artist": d.artist or "Unknown", "song_id": None, "download_id": d.id})
+                if not entry.song_id:
+                    continue
+                song = Song.query.get(entry.song_id)
+                if not song or not is_eleven_song(song):
+                    continue
+                out.append({
+                    "name": (song.name or "").strip() or "Untitled",
+                    "artist": song.artist or "GLC Radio",
+                    "song_id": song.id,
+                    "download_id": None,
+                })
             return json.dumps({"success": True, "count": len(out), "songs": out})
 
         if name == "download_song":
             song_id = args.get("song_id")
-            download_id = args.get("download_id")
-            from glconnect.models import Song, DownloadedSong
+            from glconnect.models import Song
+            from glconnect.eleven_catalog import is_eleven_song
             from flask import url_for
             if song_id:
                 song = Song.query.get(song_id)
-                if song:
+                if song and is_eleven_song(song):
                     path = url_for("playlist2.serve_song_file", song_id=song_id, _external=True)
-                    fname = f"{song.artist or 'Unknown'} - {song.name or 'track'}.mp3".replace("/", "-")
+                    fname = f"{song.artist or 'GLC Radio'} - {song.name or 'track'}.mp3".replace("/", "-")
                     actions.append({"type": "download", "url": path, "filename": fname})
                     return json.dumps({"success": True, "message": f"Download ready: {song.name or 'track'}"})
-            if download_id:
-                d = DownloadedSong.query.get(download_id)
-                if d:
-                    path = url_for("playlist2.serve_downloaded_song_file", download_id=download_id, _external=True)
-                    fname = f"{d.artist or 'Unknown'} - {d.name or 'track'}.mp3".replace("/", "-")
-                    actions.append({"type": "download", "url": path, "filename": fname})
-                    return json.dumps({"success": True, "message": f"Download ready: {d.name or 'track'}"})
-            return json.dumps({"success": False, "message": "Song not found"})
+            return json.dumps({"success": False, "message": "Song not found in the GLC Radio catalog"})
 
         return json.dumps({"error": f"Unknown tool: {name}"})
 

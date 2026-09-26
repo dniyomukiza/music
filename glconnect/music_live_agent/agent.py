@@ -43,100 +43,36 @@ def _approved_filter():
 
 def search_songs(query: str) -> str:
     """
-    Search for songs or artists in the music catalog or your playlist.
+    Search GLC Radio / ElevenLabs originals only.
     Invocation: ONLY when the user explicitly asks to search, find, or play a specific song/artist (e.g. 'find X', 'play Y', 'search for Z').
     Do NOT call for greetings ('hi', 'hello', 'can you hear me') or small talk.
-    Returns matching songs with song_id, download_id, name, artist, play_url, and cover_image.
+    Returns matching songs with song_id, name, artist, play_url, and cover_image.
     """
-    from glconnect.voc import SessionLocal
-    from glconnect.models import db, Song, Artist, DownloadedSong, Playlist
+    from glconnect.eleven_catalog import search_eleven_catalog
 
-    query = (query or "").strip().lower()
+    query = (query or "").strip()
     if not query:
         return json.dumps({"found": 0, "songs": [], "success": False})
 
-    ctx = _ctx()
-    user_id = ctx.get("user_id")
-    session = SessionLocal()
-    try:
-        all_songs_data = []
-        seen_keys = set()
-        approved = _approved_filter()
-
-        def add_unique(sid, did, name, artist, url, cover):
-            key = f"{name.lower()}|{artist.lower()}"
-            if key in seen_keys:
-                return
-            seen_keys.add(key)
-            all_songs_data.append({
-                "id": sid or (2000000 + did),
-                "song_id": sid,
-                "download_id": did,
-                "name": name,
-                "artist": artist,
-                "play_url": url,
-                "cover_image": cover or "/static/uploads/default_cover.jpg"
-            })
-
-        # 1. Check User's Playlist First (Personal Relevance)
-        if user_id:
-            playlist_entries = session.query(Playlist).filter_by(user_id=user_id).all()
-            for entry in playlist_entries:
-                if entry.song_id:
-                    s = session.query(Song).get(entry.song_id)
-                    if s and (query in s.name.lower() or (s.artist and query in s.artist.lower())):
-                        s_artist = s.artist or "Unknown"
-                        if s.artist_id:
-                            a = session.query(Artist).get(s.artist_id)
-                            if a: s_artist = a.artist_name
-                        add_unique(s.id, None, s.name or "Untitled", s_artist, _url_song(s.id), s.cover_image)
-                elif entry.download_id:
-                    d = session.query(DownloadedSong).get(entry.download_id)
-                    if d and (query in d.name.lower() or (d.artist and query in d.artist.lower())):
-                        add_unique(None, d.id, d.name or "Untitled", d.artist or "Unknown", _url_download(d.id), None)
-
-        # 2. Artist exact match (Highest Catalog Priority)
-        artist = session.query(Artist).filter(db.func.lower(Artist.artist_name) == query).first()
-        if artist:
-            songs = session.query(Song).filter_by(artist_id=artist.artist_id).filter(approved).limit(10).all()
-            for s in songs:
-                add_unique(s.id, None, s.name or "Untitled", artist.artist_name, _url_song(s.id), s.cover_image)
-
-        # 3. Search Song table (name/artist catalog search)
-        if len(all_songs_data) < 15:
-            songs = session.query(Song).filter(
-                approved,
-                db.or_(
-                    db.func.lower(Song.name).like(f"%{query}%"),
-                    db.func.lower(Song.artist).like(f"%{query}%")
-                )
-            ).limit(20).all()
-            for s in songs:
-                s_artist = s.artist or "Unknown"
-                if s.artist_id:
-                    a = session.query(Artist).get(s.artist_id)
-                    if a: s_artist = a.artist_name
-                add_unique(s.id, None, s.name or "Untitled", s_artist, _url_song(s.id), s.cover_image)
-
-        # 4. Search DownloadedSong table
-        if len(all_songs_data) < 15:
-            downloads = session.query(DownloadedSong).filter(
-                db.or_(
-                    db.func.lower(DownloadedSong.name).like(f"%{query}%"),
-                    db.func.lower(DownloadedSong.artist).like(f"%{query}%")
-                )
-            ).limit(10).all()
-            for d in downloads:
-                add_unique(None, d.id, d.name or "Untitled", d.artist or "Unknown", _url_download(d.id), None)
-
-        out = all_songs_data[:10]
-        return json.dumps({
-            "success": True, 
-            "message": f"Found {len(out)} matching songs.",
-            "action": {"type": "search_results", "songs": out}
+    base = _ctx().get("base_url", "").rstrip("/")
+    out = []
+    for song in search_eleven_catalog(query)[:10]:
+        path = song.get("path") or ""
+        play_url = f"{base}{path}" if base and path.startswith("/") else path
+        out.append({
+            "id": song.get("id"),
+            "song_id": song.get("song_id"),
+            "download_id": None,
+            "name": song.get("name"),
+            "artist": song.get("artist"),
+            "play_url": play_url,
+            "cover_image": song.get("cover_image") or "/static/uploads/default_cover.jpg",
         })
-    finally:
-        session.close()
+    return json.dumps({
+        "success": True,
+        "message": f"Found {len(out)} matching GLC Radio originals.",
+        "action": {"type": "search_results", "songs": out},
+    })
 
 
 def play_song(song_id: Optional[int] = None, download_id: Optional[int] = None) -> str:
@@ -146,35 +82,23 @@ def play_song(song_id: Optional[int] = None, download_id: Optional[int] = None) 
     Returns a JSON with success, message, and action for the client to play the audio.
     """
     from glconnect.voc import SessionLocal
-    from glconnect.models import Song, DownloadedSong
+    from glconnect.models import Song
+    from glconnect.eleven_catalog import is_eleven_song
 
     if song_id:
         session = SessionLocal()
         try:
             song = session.query(Song).get(song_id)
-            if song:
+            if song and is_eleven_song(song):
                 url = _url_song(song_id)
                 return json.dumps({
                     "success": True,
-                    "message": f"Playing {song.name or 'track'} by {song.artist or 'Unknown'}",
-                    "action": {"type": "play", "url": url, "name": song.name or "Track", "artist": song.artist or "Unknown", "song_id": song_id, "download_id": None},
+                    "message": f"Playing {song.name or 'track'} by {song.artist or 'GLC Radio'}",
+                    "action": {"type": "play", "url": url, "name": song.name or "Track", "artist": song.artist or "GLC Radio", "song_id": song_id, "download_id": None},
                 })
         finally:
             session.close()
-    if download_id:
-        session = SessionLocal()
-        try:
-            d = session.query(DownloadedSong).get(download_id)
-            if d:
-                url = _url_download(download_id)
-                return json.dumps({
-                    "success": True,
-                    "message": f"Playing {d.name or 'track'} by {d.artist or 'Unknown'}",
-                    "action": {"type": "play", "url": url, "name": d.name or "Track", "artist": d.artist or "Unknown", "song_id": None, "download_id": download_id},
-                })
-        finally:
-            session.close()
-    return json.dumps({"success": False, "message": "Song not found"})
+    return json.dumps({"success": False, "message": "Song not found in the GLC Radio catalog"})
 
 
 def add_song_to_playlist(song_id: Optional[int] = None, download_id: Optional[int] = None) -> str:
@@ -206,15 +130,16 @@ def download_song(song_id: Optional[int] = None, download_id: Optional[int] = No
     Returns a JSON with success, message, and action for the client to trigger download.
     """
     from glconnect.voc import SessionLocal
-    from glconnect.models import Song, DownloadedSong
+    from glconnect.models import Song
+    from glconnect.eleven_catalog import is_eleven_song
 
     if song_id:
         session = SessionLocal()
         try:
             song = session.query(Song).get(song_id)
-            if song:
+            if song and is_eleven_song(song):
                 url = _url_song(song_id)
-                fname = f"{song.artist or 'Unknown'} - {song.name or 'track'}.mp3".replace("/", "-")
+                fname = f"{song.artist or 'GLC Radio'} - {song.name or 'track'}.mp3".replace("/", "-")
                 return json.dumps({
                     "success": True,
                     "message": f"Download ready: {song.name or 'track'}",
@@ -222,21 +147,7 @@ def download_song(song_id: Optional[int] = None, download_id: Optional[int] = No
                 })
         finally:
             session.close()
-    if download_id:
-        session = SessionLocal()
-        try:
-            d = session.query(DownloadedSong).get(download_id)
-            if d:
-                url = _url_download(download_id)
-                fname = f"{d.artist or 'Unknown'} - {d.name or 'track'}.mp3".replace("/", "-")
-                return json.dumps({
-                    "success": True,
-                    "message": f"Download ready: {d.name or 'track'}",
-                    "action": {"type": "download", "url": url, "filename": fname},
-                })
-        finally:
-            session.close()
-    return json.dumps({"success": False, "message": "Song not found"})
+    return json.dumps({"success": False, "message": "Song not found in the GLC Radio catalog"})
 
 
 def remove_song_from_playlist(song_id: Optional[int] = None, download_id: Optional[int] = None) -> str:
@@ -275,7 +186,8 @@ def list_my_playlist() -> str:
         return json.dumps({"success": False, "message": "Please log in to view your playlist."})
 
     from glconnect.voc import SessionLocal
-    from glconnect.models import Playlist, Song, Artist, DownloadedSong
+    from glconnect.models import Playlist, Song
+    from glconnect.eleven_catalog import is_eleven_song
 
     session = SessionLocal()
     try:
@@ -284,19 +196,17 @@ def list_my_playlist() -> str:
             return json.dumps({"success": True, "count": 0, "songs": [], "message": "Your playlist is empty."})
         out = []
         for entry in playlist:
-            if entry.song_id:
-                song = session.query(Song).get(entry.song_id)
-                if song:
-                    artist_name = song.artist or "Unknown"
-                    if song.artist_id:
-                        a = session.query(Artist).get(song.artist_id)
-                        if a:
-                            artist_name = a.artist_name
-                    out.append({"name": (song.name or "").strip() or "Untitled", "artist": artist_name, "song_id": song.id, "download_id": None})
-            elif entry.download_id:
-                d = session.query(DownloadedSong).get(entry.download_id)
-                if d:
-                    out.append({"name": (d.name or "").strip() or "Untitled", "artist": d.artist or "Unknown", "song_id": None, "download_id": d.id})
+            if not entry.song_id:
+                continue
+            song = session.query(Song).get(entry.song_id)
+            if not song or not is_eleven_song(song):
+                continue
+            out.append({
+                "name": (song.name or "").strip() or "Untitled",
+                "artist": song.artist or "GLC Radio",
+                "song_id": song.id,
+                "download_id": None,
+            })
         return json.dumps({"success": True, "count": len(out), "songs": out})
     finally:
         session.close()
@@ -321,30 +231,21 @@ def get_catalog_suggestions() -> str:
     Do NOT call for greetings ('hi', 'hello', 'can you hear me') or small talk.
     Returns a JSON with a list of artists and songs to suggest to the user.
     """
-    from glconnect.voc import SessionLocal
-    from glconnect.models import Song, Artist, DownloadedSong
+    from glconnect.eleven_catalog import list_eleven_catalog
     import random
 
-    session = SessionLocal()
-    try:
-        # Get up to 5 unique artists from the Artist table
-        artists = session.query(Artist).limit(20).all()
-        suggested_artists = list(set([a.artist_name for a in artists if a.artist_name]))
-        random.shuffle(suggested_artists)
-        
-        # Get up to 5 songs from the Song table
-        songs = session.query(Song).filter(Song.approval_status == 'approved').limit(20).all()
-        suggested_songs = [{"name": s.name, "artist": s.artist or "Unknown"} for s in songs if s.name]
-        random.shuffle(suggested_songs)
+    catalog = list_eleven_catalog()
+    suggested_artists = list({track.get("artist") for track in catalog if track.get("artist")})
+    random.shuffle(suggested_artists)
+    suggested_songs = [{"name": track.get("name"), "artist": track.get("artist") or "GLC Radio"} for track in catalog]
+    random.shuffle(suggested_songs)
 
-        return json.dumps({
-            "success": True,
-            "message": "Here are some things you can ask for.",
-            "artists": suggested_artists[:5],
-            "songs": suggested_songs[:5]
-        })
-    finally:
-        session.close()
+    return json.dumps({
+        "success": True,
+        "message": "Here are some GLC Radio originals you can ask for.",
+        "artists": suggested_artists[:5],
+        "songs": suggested_songs[:5]
+    })
 
 
 MUSIC_INSTRUCTION = """Music assistant for Ink Studio. Scope: search, play, playlist, download only.

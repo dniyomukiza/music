@@ -164,16 +164,11 @@ def _marketplace_book_url(book_id: int) -> str:
 
 
 def _send_patron_listing_email(bp_user: Any, book: Any, marketplace_url: str) -> bool:
-    from mailtrap import Address, Mail, MailtrapClient
+    from glconnect.email_service import send_email
 
     user = getattr(bp_user, 'user', None)
     to_email = getattr(user, 'email', None) if user else None
     if not to_email:
-        return False
-
-    sender = os.getenv('SENDER_MAIL')
-    api_key = os.getenv('MAIL_TRAP')
-    if not sender or not api_key:
         return False
 
     body = '\n'.join([
@@ -187,18 +182,16 @@ def _send_patron_listing_email(bp_user: Any, book: Any, marketplace_url: str) ->
         '',
         'Ink Studio',
     ])
-    try:
-        MailtrapClient(token=api_key).send(Mail(
-            sender=Address(email=sender, name='Ink Studio'),
-            to=[Address(email=to_email)],
-            subject=f'Now on the marketplace: {book.title}',
-            text=body,
-            category='Patron project listed',
-        ))
-        return True
-    except Exception as exc:
-        logger.warning('Patron listing email failed for book %s: %s', getattr(book, 'id', None), exc)
-        return False
+    sent = send_email(
+        to=to_email,
+        subject=f'Now on the marketplace: {book.title}',
+        text=body,
+        from_name='Ink Studio',
+        tags=['patron-project-listed'],
+    )
+    if not sent:
+        logger.warning('Patron listing email failed for book %s', getattr(book, 'id', None))
+    return sent
 
 
 def notify_patrons_book_listed(book: Any, db: Any, *, send_email: bool = True) -> dict[str, Any]:

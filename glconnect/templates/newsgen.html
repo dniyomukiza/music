@@ -280,6 +280,19 @@
             }
         }
 
+        #flaskForm,
+        #newsForm,
+        #topicInput,
+        #keyword {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+            overflow: hidden !important;
+        }
+
         .topic-input {
             width: 100%;
             padding: 15px 20px;
@@ -976,6 +989,40 @@
             color: white;
         }
 
+        .audio-actions .btn.disabled,
+        .audio-actions .btn[aria-disabled="true"] {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .heygen-panel {
+            margin-top: 24px;
+            padding: 18px;
+            background: rgba(8, 10, 9, 0.72);
+            border: 1px solid rgba(201, 162, 39, 0.22);
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .heygen-panel h4 {
+            margin: 0 0 10px 0;
+            color: #e0bc3a;
+        }
+
+        .heygen-panel .heygen-status {
+            margin: 0 0 12px 0;
+            color: #c5cdc8;
+        }
+
+        .bulletin-video {
+            width: 100%;
+            max-width: 720px;
+            display: block;
+            margin: 12px auto 0;
+            background: #000;
+            border-radius: 8px;
+        }
+
         .generation-info {
             margin-top: 20px;
             padding: 15px;
@@ -1049,6 +1096,31 @@
             padding: 20px;
             border-radius: 12px;
             margin: 20px 0;
+        }
+
+        .bulletin-stop {
+            text-align: left;
+        }
+
+        .bulletin-stop .error-kicker {
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #a88416;
+            margin: 0 0 8px 0;
+        }
+
+        .bulletin-stop p {
+            margin: 0 0 12px 0;
+            line-height: 1.5;
+        }
+
+        .bulletin-stop .error-note {
+            margin: 0;
+            color: #5c6561;
+            font-size: 0.92rem;
         }
 
         .analytics-link {
@@ -1174,11 +1246,6 @@
     <div class="container">
         
         <div class="main-card">
-            <div class="card-header">
-                <h2><i class="fas fa-microphone"></i> Create Your News Broadcast</h2>
-                <p>Enter topics of your interest and let our AI create a professional news bulletin</p>
-            </div>
-            
             <div class="card-body">
                 <div class="features-grid">
                     <div class="feature-card">
@@ -1215,14 +1282,6 @@
                         <h3>Multi Language & Transcription</h3>
                         <p>Transcribe your news audio to text, download transcripts, and listen in 60+ languages including English, Spanish, French, German, Chinese, Japanese, Arabic, and many more</p>
                     </div>
-                    <a href="/mybook/stories" class="feature-card clickable-card" style="text-decoration: none; color: inherit;">
-                        <div class="feature-icon"><i class="fas fa-newspaper"></i></div>
-                        <h3>Worldwide Stories</h3>
-                        <p>Read stories from freelance journalists worldwide. Discover quality journalism covering news, features, opinion pieces, and investigative reports from around the globe</p>
-                        <div class="card-hover-effect">
-                            <i class="fas fa-arrow-right"></i>
-                        </div>
-                    </a>
                     <a href="{{ url_for('book_platform.content_hub') }}" class="feature-card clickable-card" style="text-decoration: none; color: inherit;">
                         <div class="feature-icon"><i class="fas fa-tv"></i></div>
                         <h3>GLC Media</h3>
@@ -1233,53 +1292,10 @@
                     </a>
                 </div>
 
-                <!-- Flask Form for server-side validation -->
-                <form method="POST" id="flaskForm">
+                <form method="POST" id="flaskForm" hidden>
                     {{ form.hidden_tag() }}
-                    <div class="input-section">
-                        <label for="keyword" class="input-label">
-                            <i class="fas fa-newspaper"></i> Enter News Topic
-                        </label>
-                        <div class="topic-input-container">
-                            <div class="input-group">
-                                {{ form.keyword(class="topic-input", placeholder="Type a topic and press Enter or tap Add (e.g., 'election results', 'AI developments', 'sports news')", autocomplete="off") }}
-                                <button type="submit" class="generate-btn-mobile" id="generateBtnMobile">
-                                    <i class="fas fa-plus"></i>
-                                    <span class="btn-text">Add Topic</span>
-                                </button>
-                            </div>
-                            <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(145deg, #c9a227, #a88416); border: none; padding: 10px 20px; border-radius: 8px; color: #060807;">
-                                    <i class="fas fa-play"></i> Generate News
-                                </button>
-                            </div>
-                            <div id="flaskValidationFeedback" class="validation-feedback"></div>
-                            {% if form.keyword.errors %}
-                                <div class="validation-error">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>{{ form.keyword.errors[0] }}</span>
-                                </div>
-                            {% endif %}
-                            <!-- Generate News button removed from Flask form to prevent duplicate triggers -->
-                            {% if validation_error %}
-                                <div class="validation-error">
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span>{{ validation_error }}</span>
-                                    <div class="validation-suggestions">
-                                        <strong>Try topics like:</strong>
-                                        <ul>
-                                            <li>Politics, elections, government</li>
-                                            <li>Economy, business, markets</li>
-                                            <li>International affairs, conflicts</li>
-                                            <li>Health, science, technology</li>
-                                            <li>Sports, entertainment, culture</li>
-                                            <li>Natural disasters, emergencies</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
+                    {{ form.keyword(id="keyword", type="hidden", autocomplete="off") }}
+                    <div id="flaskValidationFeedback" class="validation-feedback"></div>
                 </form>
                 
                 <!-- Success/Error Messages -->
@@ -1311,38 +1327,12 @@
                 </div>
 
                 <!-- JavaScript Form for advanced features -->
-                <form id="newsForm" style="display: none;">
-                    <div class="input-section">
-                        <label for="topicInput" class="input-label">
-                            <i class="fas fa-plus-circle"></i> Add News Topics
-                        </label>
-                        <div class="topic-input-container">
-                            <div class="input-group">
-                                <input 
-                                    type="text" 
-                                    id="topicInput" 
-                                    class="topic-input" 
-                                    placeholder="Type a topic and press Enter or tap Add (e.g., 'college football', 'election results', 'AI developments')"
-                                    autocomplete="off"
-                                >
-                                <button type="button" class="add-topic-btn" id="addTopicBtn">
-                                    <i class="fas fa-plus"></i>
-                                    <span class="btn-text">Add Topic</span>
-                                </button>
-                            </div>
-                            <div style="margin-top: 15px; text-align: center;">
-                                <button type="button" class="btn btn-primary" onclick="generateNewsFromTopics()" style="background: linear-gradient(145deg, #c9a227, #a88416); border: none; padding: 10px 20px; border-radius: 8px; color: #060807;">
-                                    <i class="fas fa-play"></i> Generate News
-                                </button>
-                            </div>
-                            <div id="validationFeedback" class="validation-feedback"></div>
-                            <div id="topicSuggestions" class="topic-suggestions"></div>
-                        </div>
-                        <div class="topics-display" id="topicsDisplay">
-                            <div class="empty-state">No topics added yet. Start typing above!</div>
-                        </div>
-                        <div id="validationSummary" class="validation-summary"></div>
-                    </div>
+                <form id="newsForm" hidden>
+                    <input type="hidden" id="topicInput" autocomplete="off">
+                    <div id="validationFeedback" class="validation-feedback"></div>
+                    <div id="topicSuggestions" class="topic-suggestions"></div>
+                    <div class="topics-display" id="topicsDisplay"></div>
+                    <div id="validationSummary" class="validation-summary"></div>
                     
                     <!-- Approved Topics Section -->
                     <div class="approved-topics-section" id="approvedTopicsSection" style="display: none;">
@@ -1920,15 +1910,6 @@
                 return;
             }
             
-            // Check topic limit
-            if (addedTopics.length >= 5) {
-                showFlaskValidationFeedback(topic, {
-                    valid: false,
-                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
-                });
-                return;
-            }
-            
             // Validate the topic first
             try {
                 const response = await fetch('/routes2/news/api/validate-news-topic', {
@@ -2007,15 +1988,6 @@
                 showValidationFeedback(topic, {
                     valid: false,
                     error: 'This topic has already been added'
-                });
-                return;
-            }
-            
-            // Check topic limit
-            if (addedTopics.length >= 5) {
-                showValidationFeedback(topic, {
-                    valid: false,
-                    error: 'Maximum 5 topics allowed. Please remove a topic first.'
                 });
                 return;
             }
@@ -2288,10 +2260,11 @@
                 
                 // Poll for completion
                 const taskId = data.task_id;
+                lastNewsTaskId = taskId;
                 await pollForCompletion(taskId);
                 
             } catch (error) {
-                showError('Error: ' + error.message);
+                showBulletinStopped(error.message);
                 stopProgressAnimation();
             } finally {
                 // Only hide loading if it wasn't already hidden by showResults
@@ -2330,6 +2303,7 @@
         }
         
         async function pollForCompletion(taskId) {
+            lastNewsTaskId = taskId;
             const maxAttempts = 60; // 5 minutes max
             let attempts = 0;
             
@@ -2357,9 +2331,14 @@
                         return;
                     } else if (data.status === 'failed') {
                         stopProgressAnimation();
-                        isGeneratingNews = false; // Reset flag on failure
-                        resetGenerateButtons(); // Re-enable buttons on failure
-                        throw new Error(data.error || 'Generation failed');
+                        isGeneratingNews = false;
+                        resetGenerateButtons();
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) {
+                            loadingEl.style.display = 'none';
+                        }
+                        showBulletinStopped(data.error || 'News generation failed.', data.reason);
+                        return;
                     }
                     
                     // Wait 5 seconds before next poll
@@ -2412,20 +2391,52 @@
             result.scrollIntoView({ behavior: 'smooth' });
         }
         
-        function showError(message) {
+        function bulletinStopTitle(reason) {
+            const titles = {
+                quota_exhausted: 'Gemini quota exceeded',
+                model_unavailable: 'News model unavailable',
+                permission_denied: 'API key rejected',
+                missing_api_key: 'API key missing',
+                invalid_json: 'Reporter scripts unreadable',
+                empty_response: 'Reporter scripts empty',
+                script_unavailable: 'Reporter scripts unavailable'
+            };
+            return titles[reason] || 'Bulletin not generated';
+        }
+
+        function showBulletinStopped(message, reason) {
             const result = document.getElementById('result');
+            if (!result) {
+                alert(message || 'Bulletin not generated.');
+                return;
+            }
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.style.display = 'none';
+            }
+            const title = bulletinStopTitle(reason);
+            const body = (message || 'Reporter scripts could not be written.').replace(/^Error:\s*/i, '');
             result.innerHTML = `
                 <div class="result-card">
                     <div class="result-header" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Error</h3>
+                        <h3><i class="fas fa-exclamation-triangle"></i> ${escapeNewsHtml(title)}</h3>
+                        <p>Audio and video were not produced.</p>
                     </div>
                     <div class="result-body">
-                        <div class="error-message">${message}</div>
+                        <div class="error-message bulletin-stop">
+                            ${reason ? `<div class="error-kicker">${escapeNewsHtml(reason)}</div>` : ''}
+                            <p>${escapeNewsHtml(body)}</p>
+                            <p class="error-note">Fix the issue above, then generate news again. Existing reporter avatars are unchanged.</p>
+                        </div>
                     </div>
                 </div>
             `;
             result.style.display = 'block';
-            result.scrollIntoView({ behavior: 'smooth' });
+            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showError(message) {
+            showBulletinStopped(message);
         }
         
         function goToAnalytics() {
@@ -2454,12 +2465,8 @@
             
             // Update topic count display
             if (topicCount) {
-                topicCount.textContent = `(${addedTopics.length}/5 maximum)`;
-                if (addedTopics.length >= 5) {
-                    topicCount.style.color = '#dc3545'; // Red when at limit
-                } else {
-                    topicCount.style.color = '#6c757d'; // Gray when under limit
-                }
+                topicCount.textContent = `(${addedTopics.length})`;
+                topicCount.style.color = '#6c757d';
             }
             
             if (container) {
@@ -2512,6 +2519,10 @@
         
         // Flag to prevent multiple simultaneous requests
         let isGeneratingNews = false;
+        let lastNewsTaskId = null;
+        let isGeneratingVideo = false;
+        let lastHeygenResult = null;
+        let heygenPollTimer = null;
 
         // Function to generate news from added topics
         function generateNewsFromTopics() {
@@ -2535,12 +2546,6 @@
                     alert('Please add at least one topic before generating news.');
                     return;
                 }
-            }
-            
-            // Limit to maximum 5 topics for memory safety
-            if (topicsToUse.length > 5) {
-                alert('Maximum 5 topics allowed due to server memory constraints. Please remove some topics and try again.');
-                return;
             }
             
             // Set flag to prevent duplicate requests
@@ -2580,21 +2585,22 @@
             .then(data => {
                 console.log('Broadcast response data:', data);
                 if (data.error) {
-                    alert('Error: ' + data.error);
-                    isGeneratingNews = false; // Reset flag on error
-                    resetGenerateButtons(); // Re-enable buttons on error
+                    hideLoadingState();
+                    isGeneratingNews = false;
+                    resetGenerateButtons();
+                    showBulletinStopped(data.error, data.reason);
                 } else {
                     console.log('Starting polling for task_id:', data.task_id);
+                    lastNewsTaskId = data.task_id;
                     pollForCompletion(data.task_id);
                 }
             })
             .catch(error => {
                 console.error('Error in news generation:', error);
-                alert('Error: ' + error.message);
-                isGeneratingNews = false; // Reset flag on error
-                resetGenerateButtons(); // Re-enable buttons on error
-                console.error('Error:', error);
-                alert('Error generating news. Please try again.');
+                hideLoadingState();
+                isGeneratingNews = false;
+                resetGenerateButtons();
+                showBulletinStopped(error.message || 'Error generating news. Please try again.');
             });
         }
         
@@ -2620,6 +2626,7 @@
         
         // Function to poll for completion (legacy version)
         function pollForCompletionLegacy(taskId) {
+            lastNewsTaskId = taskId;
             // Validate task ID
             if (!taskId || taskId.length < 10) {
                 console.error('Invalid task ID:', taskId);
@@ -2691,8 +2698,9 @@
                         }
                         
                         hideLoadingState();
-                        isGeneratingNews = false; // Reset flag on failure
-                        alert('News generation failed: ' + (data.error || 'Unknown error'));
+                        isGeneratingNews = false;
+                        resetGenerateButtons();
+                        showBulletinStopped(data.error || 'News generation failed.', data.reason);
                     } else if (data.error === 'Task not found') {
                         console.log('Task not found - may have completed or been cancelled');
                         clearInterval(pollInterval);
@@ -2798,11 +2806,188 @@
             }
         }
         
+        function escapeNewsHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function heygenPanelHtml(result) {
+            lastHeygenResult = result;
+            const heygen = (result && result.heygen) || { status: 'idle' };
+            const status = heygen.status || 'idle';
+            const hasScripts = Boolean(result && (result.has_scripts || result.scripts));
+            const bumperUrl = (result && result.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
+            const clips = heygen.clips || [];
+            const readyClips = clips.filter(clip => clip && clip.url);
+            const finalUrl = heygen.final_url || '';
+            let actionLabel = 'Generate video bulletin';
+            if (status === 'queued' || status === 'processing') {
+                actionLabel = 'Generating video…';
+            } else if (status === 'failed' || status === 'partial') {
+                actionLabel = 'Retry video bulletin';
+            } else if (status === 'completed') {
+                actionLabel = 'Regenerate video bulletin';
+            }
+            const busy = status === 'queued' || status === 'processing';
+            const buttonDisabled = !hasScripts || busy;
+            const playDisabled = !finalUrl && readyClips.length === 0;
+            const downloadDisabled = !finalUrl;
+            let statusLabel = 'Audio is ready. Video is optional and starts only when you click Generate.';
+            if (!hasScripts) {
+                statusLabel = 'Generate news again to enable the video bulletin.';
+            } else if (status === 'queued' || status === 'processing') {
+                statusLabel = 'Generating video bulletin…';
+            } else if (status === 'completed' && finalUrl) {
+                statusLabel = 'Video bulletin is ready to play and download.';
+            } else if (status === 'completed' || status === 'partial') {
+                statusLabel = 'Video bulletin is ready.';
+            } else if (status === 'failed') {
+                statusLabel = (heygen.warnings && heygen.warnings[0])
+                    ? heygen.warnings[0]
+                    : 'Video bulletin could not be generated. You can retry.';
+            }
+            return `
+                <div class="heygen-panel" id="heygenPanel">
+                    <h4><i class="fas fa-video"></i> Video bulletin</h4>
+                    <p class="heygen-status">${escapeNewsHtml(statusLabel)}</p>
+                    <div class="audio-actions">
+                        <button class="btn btn-primary" id="generateVideoBtn" ${buttonDisabled ? 'disabled' : ''}
+                            onclick="generateVideoBulletin()">
+                            <i class="fas fa-film"></i> ${escapeNewsHtml(actionLabel)}
+                        </button>
+                        <button class="btn btn-secondary" id="playBulletinBtn" ${playDisabled ? 'disabled' : ''}
+                            onclick="playBulletinPlaylist()">
+                            <i class="fas fa-play"></i> Play video bulletin
+                        </button>
+                        <a class="btn btn-primary${downloadDisabled ? ' disabled' : ''}" id="downloadBulletinBtn"
+                            href="${downloadDisabled ? '#' : escapeNewsHtml(finalUrl + '?download=1')}"
+                            ${downloadDisabled ? 'aria-disabled="true" tabindex="-1" onclick="return false;"' : 'download="glc-news-bulletin.mp4"'}>
+                            <i class="fas fa-download"></i> Download MP4
+                        </a>
+                    </div>
+                    <video id="bulletinVideo" class="bulletin-video" controls playsinline
+                        data-bumper="${escapeNewsHtml(bumperUrl)}"
+                        ${finalUrl || readyClips.length ? '' : 'style="display:none;"'}></video>
+                </div>
+            `;
+        }
+
+        function generateVideoBulletin() {
+            const taskId = lastNewsTaskId;
+            if (!taskId) {
+                alert('Generate a news broadcast first, then create the video bulletin.');
+                return;
+            }
+            if (isGeneratingVideo) {
+                return;
+            }
+            isGeneratingVideo = true;
+            const button = document.getElementById('generateVideoBtn');
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-film"></i> Generating video…';
+            }
+            fetch(`/routes2/news/video/${taskId}`, { method: 'POST' })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok) {
+                        throw new Error(data.error || 'Could not start the video bulletin');
+                    }
+                    pollHeygenUntilDone(taskId);
+                })
+                .catch(error => {
+                    isGeneratingVideo = false;
+                    alert(error.message || 'Could not start the video bulletin');
+                    const retry = document.getElementById('generateVideoBtn');
+                    if (retry) {
+                        retry.disabled = false;
+                    }
+                });
+        }
+
+        function pollHeygenUntilDone(taskId) {
+            if (heygenPollTimer) {
+                clearInterval(heygenPollTimer);
+            }
+            const tick = () => {
+                fetch(`/routes2/news/status/${taskId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const panel = document.getElementById('heygenPanel');
+                        if (panel) {
+                            panel.outerHTML = heygenPanelHtml(data);
+                        }
+                        const status = (data.heygen && data.heygen.status) || 'idle';
+                        if (status === 'completed' || status === 'partial' || status === 'failed') {
+                            clearInterval(heygenPollTimer);
+                            heygenPollTimer = null;
+                            isGeneratingVideo = false;
+                            if (status === 'completed' || status === 'partial') {
+                                playBulletinPlaylist(data);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('HeyGen poll failed', error);
+                    });
+            };
+            tick();
+            heygenPollTimer = setInterval(tick, 5000);
+        }
+
+        function playBulletinPlaylist(result) {
+            const payload = (result && result.heygen) ? result : lastHeygenResult;
+            const player = document.getElementById('bulletinVideo');
+            if (!player || !payload) {
+                return;
+            }
+            const bumper = player.getAttribute('data-bumper') || (payload.bumper_url) || '/routes2/news/bumper/grojingle.mp4';
+            const heygen = payload.heygen || {};
+            const finalUrl = heygen.final_url || '';
+            const clips = (heygen.clips || []).filter(clip => clip && clip.url);
+            if (!finalUrl && !clips.length) {
+                return;
+            }
+            player.style.display = 'block';
+            if (finalUrl) {
+                player.onended = null;
+                player.src = finalUrl;
+                player.play().catch(error => {
+                    console.error('Video play failed', error);
+                });
+                return;
+            }
+            const opener = '/routes2/news/bumper/tvsweeper.mp4';
+            const playlist = [opener, ...clips.map(clip => clip.url), bumper];
+            let index = 0;
+            player.style.display = 'block';
+            const playAt = () => {
+                if (index >= playlist.length) {
+                    return;
+                }
+                player.src = playlist[index];
+                player.play().catch(error => {
+                    console.error('Video play failed', error);
+                });
+            };
+            player.onended = () => {
+                index += 1;
+                playAt();
+            };
+            playAt();
+        }
+
         // Function to show results
         function showResults(result) {
             // Reset the generation flag when results are shown
             isGeneratingNews = false;
-            console.log('News generation completed, setting isGeneratingNews = false');
+            if (result && result.task_id) {
+                lastNewsTaskId = result.task_id;
+            }
             
             // Reset generate button states
             resetGenerateButtons();
@@ -2865,9 +3050,10 @@
                         </div>
                         
                         <div class="generation-info">
-                            <p><strong>Summary:</strong> ${result.summary || 'N/A'}</p>
-                            <p><strong>Topics:</strong> ${result.topics ? result.topics.join(', ') : 'N/A'}</p>
+                            <p><strong>Summary:</strong> ${escapeNewsHtml(result.summary || 'N/A')}</p>
+                            <p><strong>Topics:</strong> ${result.topics ? result.topics.map(escapeNewsHtml).join(', ') : 'N/A'}</p>
                             <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                            ${heygenPanelHtml(result)}
                         </div>
                     </div>
                 `;
