@@ -10,35 +10,84 @@ jingles = fallback(track_sensitive=true, [
   single("/liqfolder/jingle.mp3"),
   single("/liqfolder/jinglemix.ogg")
 ])
-clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
+hour_jingle = single("/liqfolder/jinglemix.ogg")
 gosp3 = playlist("/liqfolder/eleven.m3u")
 satmix = playlist("/liqfolder/eleven.m3u")
 eleven = playlist("/liqfolder/eleven.m3u")
 
 # Daily GLC News (raw MP3, request.dynamic only — never playlist/.m3u).
-# Container TZ is America/Los_Angeles: 11:00–11:30 AM and 6:00–6:30 PM Pacific.
-# predicate.once({window}) re-arms when the window closes, so each calendar day gets both slots
-# without restarting liquidsoap (source once() is once-per-process-lifetime and must not be used).
-# Fallible: if final_news_broadcast.mp3 is missing, the slot is skipped and jingles/songs stay on.
-# request.dynamic resolves the file when the window opens, so a replaced MP3 is today's bulletin.
+# Container TZ is America/Los_Angeles. Test windows: 11:40–12:00 and 12:01–12:31 PM Pacific.
+# The window predicate stays true for the whole half hour so the file has time to
+# start. The request function latches after one successful open, so the bulletin
+# does not loop, and the latch clears when that window ends. source once() and
+# predicate.once() are the wrong tools: once() never re-arms, and predicate.once()
+# is only true for the instant the clock ticks.
+# Fallible: if final_news_broadcast.mp3 is missing, the slot is skipped and songs stay on.
 news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
-news_morning = request.dynamic(id="glc_news_morning", {request.create(news_path)})
-news_evening = request.dynamic(id="glc_news_evening", {request.create(news_path)})
+morning_started = ref(false)
+evening_started = ref(false)
+
+def in_morning() =
+  t = time.local()
+  t.hour == 11 and t.min >= 40
+end
+
+def in_evening() =
+  t = time.local()
+  t.hour == 12 and t.min >= 1 and t.min < 31
+end
+
+def morning_request() =
+  if morning_started() or not file.exists(news_path) then
+    request.create("")
+  else
+    morning_started := true
+    request.create(news_path)
+  end
+end
+
+def evening_request() =
+  if evening_started() or not file.exists(news_path) then
+    request.create("")
+  else
+    evening_started := true
+    request.create(news_path)
+  end
+end
+
+news_morning = request.dynamic(id="glc_news_morning", retry_delay=10., morning_request)
+news_evening = request.dynamic(id="glc_news_evening", retry_delay=10., evening_request)
+
+def rearm_news() =
+  if not in_morning() then
+    morning_started := false
+  end
+  if not in_evening() then
+    evening_started := false
+  end
+end
+
+thread.run(delay=0., every=5., rearm_news)
 
 # Song, then jingle, then song, then jingle.
 music = rotate(weights=[1, 1], [songs, jingles])
 music = fallback([music, default])
 
-# === Add top-of-the-hour clock jingle (skipped during the news window) ===
-music = add([music, switch([({ 0m0s }, clock)])])
+# Top-of-hour jingle. 12:00 stays a jingle; the next bulletin starts at 12:01.
+def play_clock() =
+  t = time.local()
+  t.min == 0 and t.sec < 2
+end
 
-# News windows (Pacific): 11:00–11:30 AM and 6:00–6:30 PM.
-# Outer fallback track_sensitive=false starts each bulletin on time; inner switch track_sensitive=true
-# plays the full bulletin once per window (predicate.once resets daily when the window ends).
+music = add([music, switch([(play_clock, hour_jingle)])])
+
+# News windows (Pacific), test times: 11:40–12:00 and 12:01–12:31 PM.
+# track_sensitive=false cuts the current song as soon as the bulletin is ready,
+# and the latch above stops a second play before the window closes.
 radio = fallback(track_sensitive=false, [
-  switch(track_sensitive=true, [
-    (predicate.once({ 11h0m-11h30m }), news_morning),
-    (predicate.once({ 18h0m-18h30m }), news_evening)
+  switch(track_sensitive=false, [
+    (in_morning, news_morning),
+    (in_evening, news_evening)
   ]),
   music
 ])
