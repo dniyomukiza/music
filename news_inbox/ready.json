@@ -1,18 +1,18 @@
 {
   "source": "newsroom-agent",
   "anchor": {
-    "intro": "{TIMECHECK} Welcome to GLC News. Ahead: Bill Gates warns A.I. could drive events that cause a billion deaths, the Trump administration's third-country deportations, Apple hit with a five point seven billion dollar haptic patent verdict, and Harry Kane scores again for England.",
-    "outro": "Thanks Ernest for that report. That wraps this GLC News bulletin. Thank you for listening."
+    "intro": "{TIMECHECK} Welcome to GLC News. Ahead: F.B.I. co-deputy director Andrew Bailey resigns, Tesla pushes its Roadster event to October fifteenth, SpaceX Starship reaches orbit for the first time, and Belarus registers its first crypto banks.",
+    "outro": "Thanks Isabella for that report. That wraps this GLC News bulletin. Thank you for listening."
   },
   "reporters": [
     {
       "reporter": "Edith",
       "category": "politics",
-      "handoff": "First, Edith on those third-country deportations.",
+      "handoff": "First, Edith on the F.B.I. departure.",
       "stories": [
         {
-          "topic": "Trump admin third-country deportations",
-          "script": "The Trump administration has deported more than twenty-five thousand people to at least twenty-eight countries even though those countries are not their own, the Washington Post reports. Coverage tied to France twenty-four and Forbidden Stories says migrants were sent to third countries under arrangements that stretch beyond traditional returns. Rights groups and legal advocates call the practice a sharp expansion of third-country removals."
+          "topic": "FBI co-deputy director Andrew Bailey resigns",
+          "script": "F.B.I. co-deputy director Andrew Bailey has announced his resignation after just over a year at the bureau. N.B.C. News, Politico, the Washington Post, and Bloomberg Law report the move. Bailey leaves one of the bureau's top deputy roles with no detailed public reason yet released for the exit."
         }
       ],
       "signoff": "I am Edith, for GLC News."
@@ -20,31 +20,31 @@
     {
       "reporter": "Mark",
       "category": "tech",
-      "handoff": "Thanks Edith. Mark with two tech stories, starting with Bill Gates.",
+      "handoff": "Thanks Edith. Mark with two stories, starting with Tesla.",
       "stories": [
         {
-          "topic": "Bill Gates on AI risk and regulation",
-          "script": "Bill Gates says artificial intelligence is certainly powerful enough to drive events that cause a billion deaths, and he is urging stronger government regulation beyond industry self-policing. In comments carried by N.B.C. Meet the Press, The Verge, and Business Insider, Gates argued that voluntary rules are not enough as the technology scales. He framed the risk as extreme enough that governments need clearer limits on how advanced systems are built and deployed."
+          "topic": "Tesla postpones Roadster event to October 15",
+          "script": "Tesla is postponing its Roadster event to October fifteenth because of severe weather. The move was confirmed in an official Tesla post, with Electrek noting the weather context around the delay. Fans who expected an earlier reveal will now wait until mid-October for the next Roadster milestone."
         },
         {
-          "topic": "Apple $5.7B haptic patent verdict",
+          "topic": "Starship first orbit and Starlink deploy",
           "bridge": "Also,",
-          "script": "A United States jury has ordered Apple to pay a record five point seven billion dollars after finding the company used patented haptic technology in iPhones and Apple Watches. Reuters, Bloomberg Law, and Law three sixty report the verdict as one of the largest patent awards against a tech giant. Apple is expected to appeal, while the plaintiffs say the win validates years of litigation over touch feedback patents."
+          "script": "SpaceX Starship reached orbit for the first time, deployed twenty-six upgraded Starlink satellites, then splashed down in the Pacific near Hawaii. An early engine failure cut a roughly ten-hour plan to about three hours, according to Bloomberg, Fortune, Space dot com, and Good Morning America. The flight still marks Starship's first successful orbital reach and satellite deployment."
         }
       ],
       "signoff": "I am Mark, for GLC News."
     },
     {
-      "reporter": "Ernest",
-      "category": "sports",
-      "handoff": "Thanks Mark. Ernest on Harry Kane.",
+      "reporter": "Isabella",
+      "category": "finance",
+      "handoff": "Thanks Mark. Isabella on Belarus and crypto banking.",
       "stories": [
         {
-          "topic": "Harry Kane scores for England",
-          "script": "Harry Kane scored for England, lifting his tally to seven goals and eight goal contributions across club and country this season. Fabrizio Romano reported the strike live as England played. Kane remains England captain and continues to lead the line for Bayern Munich while stacking early-season numbers for club and country."
+          "topic": "Belarus registers first two crypto banks",
+          "script": "Belarus has officially registered its first two crypto banks, according to state media outlet S.B. by, with corroboration from CryptoBriefing and KuCoin News. The approvals put Belarus among countries building formal banking channels for digital assets. Details on which operators cleared registration and what products they can offer are still rolling out."
         }
       ],
-      "signoff": "I am Ernest, for GLC News."
+      "signoff": "I am Isabella, for GLC News."
     }
   ]
 }
