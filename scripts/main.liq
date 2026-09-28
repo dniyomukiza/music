@@ -15,14 +15,15 @@ gosp3 = playlist("/liqfolder/eleven.m3u")
 satmix = playlist("/liqfolder/eleven.m3u")
 eleven = playlist("/liqfolder/eleven.m3u")
 
-# Daily GLC News (raw MP3, single/once only — never playlist/.m3u).
+# Daily GLC News (raw MP3, request.dynamic only — never playlist/.m3u).
 # Container TZ is America/Los_Angeles: 11:00–11:30 AM and 6:00–6:30 PM Pacific.
-# Separate once() per window so each slot plays the bulletin once, then music resumes.
+# predicate.once({window}) re-arms when the window closes, so each calendar day gets both slots
+# without restarting liquidsoap (source once() is once-per-process-lifetime and must not be used).
 # Fallible: if final_news_broadcast.mp3 is missing, the slot is skipped and jingles/songs stay on.
 # request.dynamic resolves the file when the window opens, so a replaced MP3 is today's bulletin.
 news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
-news_morning = once(request.dynamic(id="glc_news_morning", {request.create(news_path)}))
-news_evening = once(request.dynamic(id="glc_news_evening", {request.create(news_path)}))
+news_morning = request.dynamic(id="glc_news_morning", {request.create(news_path)})
+news_evening = request.dynamic(id="glc_news_evening", {request.create(news_path)})
 
 # Song, then jingle, then song, then jingle.
 music = rotate(weights=[1, 1], [songs, jingles])
@@ -32,11 +33,12 @@ music = fallback([music, default])
 music = add([music, switch([({ 0m0s }, clock)])])
 
 # News windows (Pacific): 11:00–11:30 AM and 6:00–6:30 PM.
-# track_sensitive=false starts each bulletin on time; after it ends, music resumes until the window closes.
+# Outer fallback track_sensitive=false starts each bulletin on time; inner switch track_sensitive=true
+# plays the full bulletin once per window (predicate.once resets daily when the window ends).
 radio = fallback(track_sensitive=false, [
-  switch(track_sensitive=false, [
-    ({ 11h0m-11h30m }, news_morning),
-    ({ 18h0m-18h30m }, news_evening)
+  switch(track_sensitive=true, [
+    (predicate.once({ 11h0m-11h30m }), news_morning),
+    (predicate.once({ 18h0m-18h30m }), news_evening)
   ]),
   music
 ])
