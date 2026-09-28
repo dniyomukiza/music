@@ -16,7 +16,7 @@ satmix = playlist("/liqfolder/eleven.m3u")
 eleven = playlist("/liqfolder/eleven.m3u")
 
 # Daily GLC News (raw MP3, request.dynamic only — never playlist/.m3u).
-# Container TZ is America/Los_Angeles. Test windows: 11:40–12:00 and 12:01–12:31 PM Pacific.
+# Container TZ is America/Los_Angeles. Windows: 11:00–11:30 AM and 6:00–6:30 PM Pacific.
 # The window predicate stays true for the whole half hour so the file has time to
 # start. The request function latches after one successful open, so the bulletin
 # does not loop, and the latch clears when that window ends. source once() and
@@ -29,12 +29,12 @@ evening_started = ref(false)
 
 def in_morning() =
   t = time.local()
-  t.hour == 11 and t.min >= 40
+  t.hour == 11 and t.min < 30
 end
 
 def in_evening() =
   t = time.local()
-  t.hour == 12 and t.min >= 1 and t.min < 31
+  t.hour == 18 and t.min < 30
 end
 
 def morning_request() =
@@ -73,15 +73,15 @@ thread.run(delay=0., every=5., rearm_news)
 music = rotate(weights=[1, 1], [songs, jingles])
 music = fallback([music, default])
 
-# Top-of-hour jingle. 12:00 stays a jingle; the next bulletin starts at 12:01.
+# Top-of-hour jingle. Skipped at 11:00 and 6:00, when the bulletin starts.
 def play_clock() =
   t = time.local()
-  t.min == 0 and t.sec < 2
+  t.min == 0 and t.sec < 2 and t.hour != 11 and t.hour != 18
 end
 
 music = add([music, switch([(play_clock, hour_jingle)])])
 
-# News windows (Pacific), test times: 11:40–12:00 and 12:01–12:31 PM.
+# News windows (Pacific): 11:00–11:30 AM and 6:00–6:30 PM.
 # track_sensitive=false cuts the current song as soon as the bulletin is ready,
 # and the latch above stops a second play before the window closes.
 radio = fallback(track_sensitive=false, [
