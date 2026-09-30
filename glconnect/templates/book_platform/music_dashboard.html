@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <meta name="description" content="Ink Studio music dashboard, search, queue, and voice DJ.">
+    <meta name="description" content="Ink Studio music dashboard, search, and queue.">
     <title>Music Dashboard | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,12 +74,10 @@
     <div class="container py-4 py-md-5 px-3 px-md-4">
         <header class="ink-music-hero mb-4 mb-lg-5">
             <p class="ink-music-eyebrow mb-0">Ink Studio · Music</p>
-            <h1 class="ink-music-title">Artist dashboard</h1>
-            <p class="ink-music-lead">Search the catalog, build your queue, and use the voice agent to DJ hands free, optimized for focus and flow.</p>
+            <p class="ink-music-lead">Search the catalog and build your queue, optimized for focus and flow.</p>
             <div class="ink-music-pills" role="list">
                 <span class="ink-music-pill" role="listitem"><i class="fas fa-wave-square me-1" aria-hidden="true"></i>High fidelity stream</span>
                 <span class="ink-music-pill" role="listitem"><i class="fas fa-list-ol me-1" aria-hidden="true"></i>Smart queue</span>
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-microphone-alt me-1" aria-hidden="true"></i>Voice DJ</span>
             </div>
         </header>
 
@@ -169,24 +167,6 @@
                                 </button>
                             </div>
                         </div>
-
-                        <div class="ink-music-voice-strip">
-                            <div class="d-flex align-items-center gap-3 flex-wrap">
-                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Speak to control playback">
-                                    <i class="fas fa-microphone-alt me-2" aria-hidden="true"></i>Virtual DJ
-                                </button>
-                                <button type="button" class="btn btn-link text-muted text-decoration-none btn-sm p-0" onclick="showVoiceTranscript()">
-                                    <i class="fas fa-stream me-1" aria-hidden="true"></i>Conversation log
-                                </button>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-volume-down text-muted small" aria-hidden="true"></i>
-                                <input type="range" id="voiceVolumeSlider" class="form-range custom-range" min="0.01" max="1" step="0.01" value="0.15" style="width: 100px;" aria-label="Voice assistant volume">
-                                <span id="voiceVolumeLabel" class="text-muted small" style="min-width: 2.25rem;">15%</span>
-                            </div>
-                        </div>
-                        <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
-                        <div id="voiceAgentResponse" class="mt-2 text-center small text-white-50" style="min-height: 1.25rem;"></div>
                     </div>
                 </div>
             </div>
@@ -882,25 +862,6 @@
                 });
         }
 
-        function findPlaylistAudioForAction(a) {
-            if (!a.url) return null;
-            const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
-            const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
-            let audioEl = null;
-            if (a.song_id != null || a.download_id != null) {
-                const sel = a.song_id != null ? `[data-song-id="${a.song_id}"]` : `[data-download-id="${a.download_id}"]`;
-                const card = document.querySelector('.playlist-song-card' + sel);
-                if (card) audioEl = card.querySelector('.playlist-audio');
-            }
-            if (!audioEl) {
-                document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
-                    const s = el.querySelector('source');
-                    if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || (pathPart && s.src.includes(pathPart)))) audioEl = el;
-                });
-            }
-            return audioEl;
-        }
-        
         function setupPlaylistPlayback() {
             // Set up event listeners for all playlist audio elements
             const audioElements = document.querySelectorAll('.playlist-audio');
@@ -1034,294 +995,6 @@
                 button.innerHTML = original;
                 button.disabled = false;
             });
-        }
-
-        // Voice Agent - Gemini Live only (no fallback)
-        let voiceAgentActive = false;
-        let voiceAgentUserStopped = false;
-        let voiceLiveWs = null;
-        let voiceLiveMode = false;
-        let voiceLiveTried = false;
-        let voiceLivePlayerNode = null;
-        let voiceLiveMicStream = null;
-        const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
-        const VOICE_WS_TOKEN = {{ (music_live_ws_token(current_user.user_id) if current_user.is_authenticated else '') | tojson }};
-        let voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
-
-        let voiceTranscriptLog = [];
-        let voiceVolumeGain = 0.15;
-        function isInternalReasoning(t) {
-            const s = (t || '').trim();
-            return /^\*\*[^*]+\*\*/.test(s) || /^I've (determined|registered|zeroed in)/i.test(s);
-        }
-        function addAgentTranscript(t) {
-            const text = (t || '').trim().replace(/\n/g, ' ');
-            if (!text || isInternalReasoning(text)) return;
-            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
-            if (last && last.role === 'Agent') {
-                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
-                    last.text = text;
-                    return;
-                }
-                if (last.text.startsWith(text) || last.text === text) return;
-            }
-            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
-                voiceTranscriptLog.push({ role: 'Agent', text: text });
-            }
-        }
-        function addUserTranscript(t) {
-            const text = (t || '').trim().replace(/\n/g, ' ');
-            if (!text) return;
-            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
-            if (last && last.role === 'You') {
-                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
-                    last.text = text;
-                    return;
-                }
-                if (last.text.startsWith(text) || last.text === text) return;
-            }
-            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
-                voiceTranscriptLog.push({ role: 'You', text: text });
-            }
-        }
-        let voiceLiveGainNode = null;
-        function getVoiceVolume() { return voiceVolumeGain; }
-        function showTapToPlayFallback(url, label) {
-            const respEl = document.getElementById('voiceAgentResponse');
-            respEl.querySelectorAll('.voice-tap-to-play').forEach(b => b.remove());
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-success btn-sm mt-1 voice-tap-to-play';
-            btn.innerHTML = '<i class="fas fa-play me-1"></i>Tap to play: ' + (label || 'Song');
-            btn.onclick = () => {
-                const a = new Audio(url);
-                a.volume = voiceVolumeGain;
-                a.play().catch(() => {});
-                btn.remove();
-            };
-            respEl.appendChild(btn);
-        }
-        function executeVoiceAction(a, retried) {
-             if (a.type === 'play' && a.url) {
-                 if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id, retried ? '(retry)' : '');
-                 const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
-
-                 // Try to find in UI first
-                 let audioEl = findPlaylistAudioForAction(a);
-
-                 if (audioEl) {
-                     if (typeof console !== 'undefined') console.log('[Voice] Playing via existing playlist element');
-                     audioEl.volume = voiceVolumeGain;
-                     audioEl.play().catch(e => {
-                         console.warn('Play failed (playlist):', e);
-                         showTapToPlayFallback(playUrl, a.name || 'Song');
-                     });
-                 } else if (!retried) {
-                     // If not found, refresh playlist and try again after a delay for DOM rendering
-                     if (typeof console !== 'undefined') console.log('[Voice] Song not in UI, refreshing playlist...');
-                     loadPlaylist().then(() => {
-                         setTimeout(() => executeVoiceAction(a, true), 800);
-                     });
-                 } else {
-                     if (typeof console !== 'undefined') console.log('[Voice] Still no playlist match, using new Audio');
-                     const audio = new Audio(playUrl);
-                     audio.volume = voiceVolumeGain;
-                     audio.play().catch(e => {
-                         console.warn('Play failed:', e);
-                         showTapToPlayFallback(playUrl, a.name || 'Song');
-                     });
-                 }
-             } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
-                 loadPlaylist();
-                 if (a.type === 'add_to_playlist') {
-                     // Optional: Pulse the playlist title or show a temporary notification
-                     const title = document.querySelector('.playlist-section h4');
-                     if (title) {
-                         title.classList.add('text-success');
-                         setTimeout(() => title.classList.remove('text-success'), 2000);
-                     }
-                 }
-             } else if (a.type === 'search_results' && Array.isArray(a.songs)) {
-                 // Professional move: Update the search results UI with agent results
-                 renderAgentSearchResults(a.songs);
-             } else if (a.type === 'show_transcript') {
-                 showVoiceTranscript();
-             } else if (a.type === 'download' && a.url) {
-                 const aEl = document.createElement('a');
-                 aEl.href = a.url;
-                 aEl.download = (a.filename || 'song.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
-                 aEl.click();
-             }
-        }
-
-        function renderAgentSearchResults(songs) {
-            const container = document.getElementById('searchResults');
-            if (!container) return;
-            
-            // Clear current results and show new ones
-            container.innerHTML = '';
-            
-            if (!songs || songs.length === 0) {
-                container.innerHTML = '<div class="col-12"><p class="text-center text-muted">No songs found for that search.</p></div>';
-                return;
-            }
-            
-            let html = '';
-            songs.forEach(song => {
-                const sId = song.song_id || 'null';
-                const dId = song.download_id || 'null';
-                const sNameSafe = song.name.replace(/'/g, "\\'");
-                html += `
-                    <div class="col-md-6 col-lg-4 mb-4 fade-in">
-                        <div class="card h-100 song-card shadow-sm border-0">
-                            <img src="${song.cover_image || '/static/uploads/default_cover.jpg'}" class="card-img-top song-cover" alt="${song.name}" loading="lazy">
-                            <div class="card-body">
-                                <h5 class="card-title text-truncate">${song.name}</h5>
-                                <p class="card-text text-muted text-truncate">${song.artist}</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-primary btn-sm flex-grow-1" onclick="playSong(${sId}, ${dId}, '${sNameSafe}', this)">
-                                        <i class="fas fa-play me-1"></i>Play
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="addSongToPlaylist(${sId}, ${dId}, '${sNameSafe}', this)">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-            // Scroll to search results smoothly
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        // Global audio contexts for reuse and easier mobile unlocking
-        let recorderCtx = null;
-        let playerCtx = null;
-
-        async function unlockAudioContexts() {
-            if (recorderCtx && recorderCtx.state === 'suspended') await recorderCtx.resume();
-            if (playerCtx && playerCtx.state === 'suspended') await playerCtx.resume();
-        }
-
-        async function tryStartVoiceLive() {
-            const btn = document.getElementById('voiceAgentBtn');
-            const respEl = document.getElementById('voiceAgentResponse');
-
-            // Mobile Autoplay Fix: Contexts MUST be created or resumed on a user gesture
-            try {
-                if (!recorderCtx) recorderCtx = new AudioContext({ sampleRate: 16000 });
-                if (!playerCtx) playerCtx = new AudioContext({ sampleRate: 24000 });
-                await unlockAudioContexts();
-            } catch (err) {
-                console.error('AudioContext initialization failed:', err);
-            }
-
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            let wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
-            if (VOICE_WS_TOKEN) wsUrl += '?token=' + encodeURIComponent(VOICE_WS_TOKEN);
-
-            try {
-                voiceLiveWs = new WebSocket(wsUrl);
-                await new Promise((resolve, reject) => {
-                    const t = setTimeout(() => reject(new Error('Connection timeout (8s). Check if FastAPI is running.')), 8000);
-                    let rejected = false;
-                    const fail = (msg) => { if (!rejected) { rejected = true; clearTimeout(t); reject(new Error(msg)); } };
-                    voiceLiveWs.onopen = () => { clearTimeout(t); resolve(); };
-                    voiceLiveWs.onerror = () => fail('WebSocket connection failed'); 
-                    voiceLiveWs.onclose = (e) => {
-                        if (!rejected && voiceLiveWs.readyState !== WebSocket.OPEN) {
-                            const reason = e.reason || ('code ' + e.code);
-                            fail('WebSocket closed: ' + reason + (e.code === 1006 ? ' (check server logs)' : ''));
-                        }
-                    };
-                });
-
-                await Promise.all([
-                    recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}'),
-                    playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}')
-                ]);
-
-                try {
-                    voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { 
-                            channelCount: 1,
-                            echoCancellation: true,
-                            noiseSuppression: true
-                        } 
-                    });
-                } catch (micErr) {
-                    throw new Error('Microphone access denied or unavailable. Please check your settings.');
-                }
-
-                voiceLivePlayerNode = new AudioWorkletNode(playerCtx, 'pcm-player-processor');
-                voiceLiveGainNode = playerCtx.createGain();
-                voiceLiveGainNode.gain.value = voiceVolumeGain;
-                voiceLivePlayerNode.connect(voiceLiveGainNode);
-                voiceLiveGainNode.connect(playerCtx.destination);
-
-                voiceLiveMode = true;
-                voiceAgentActive = true;
-                btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening... (click to stop)';
-
-                const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
-                const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
-                source.connect(recNode);
-
-                const CHUNK = 320;
-                const buf = new Float32Array(CHUNK * 2);
-                let bufLen = 0;
-                const pcm16 = new Int16Array(CHUNK);
-                recNode.port.onmessage = (e) => {
-                    const f = e.data;
-                    for (let i = 0; i < f.length; i++) {
-                        buf[bufLen++] = f[i];
-                        if (bufLen >= CHUNK) {
-                            if (voiceLiveWs?.readyState === WebSocket.OPEN && voiceAgentActive) {
-                                for (let j = 0; j < CHUNK; j++) pcm16[j] = (buf[j] < -1 ? -1 : buf[j] > 1 ? 1 : buf[j]) * 0x7fff;
-                                voiceLiveWs.send(pcm16.buffer);
-                            }
-                            const remain = bufLen - CHUNK;
-                            for (let k = 0; k < remain; k++) buf[k] = buf[CHUNK + k];
-                            bufLen = remain;
-                        }
-                    }
-                };
-
-                voiceLiveWs.onmessage = (ev) => {
-                    try {
-                        const evt = JSON.parse(ev.data);
-                        if (evt.type === 'music_action' && evt.action) executeVoiceAction(evt.action);
-                        const parts = evt.content?.parts || evt.server_content?.model_turn?.parts;
-                        if (!parts) return;
-                        for (const p of parts) {
-                            const inline = p.inlineData || p.inline_data;
-                            if (inline?.data && voiceLivePlayerNode) {
-                                const b64 = inline.data.replace(/-/g,'+').replace(/_/g,'/');
-                                const bin = atob(b64);
-                                const u8 = new Uint8Array(bin.length);
-                                for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-                                voiceLivePlayerNode.port.postMessage(u8.buffer);
-                            }
-                            if (p.text) addAgentTranscript(p.text);
-                        }
-                    } catch (_) {}
-                };
-
-                voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
-                respEl.innerHTML = '<span class="text-success">Live – Speak now</span>';
-
-            } catch (e) {
-                console.error('[VoiceLive] Error:', e);
-                respEl.innerHTML = `<span class="text-danger">${e.message}</span>`;
-                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
-                voiceAgentActive = false;
-            }
-        }
-        function startVoiceRecognition() {
-            if (voiceLiveTried && voiceLiveMode && voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) {
-                return;
-            }
-            tryStartVoiceLive();
         }
 
         function removeFromPlaylist(songId, downloadId, button) {
@@ -1537,37 +1210,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             loadPlaylist();
-            const volSlider = document.getElementById('voiceVolumeSlider');
-            const volLabel = document.getElementById('voiceVolumeLabel');
-            if (volSlider && volLabel) {
-                volSlider.addEventListener('input', function() {
-                    voiceVolumeGain = parseFloat(this.value);
-                    volLabel.textContent = Math.round(voiceVolumeGain * 100) + '%';
-                    if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
-                });
-            }
         });
-        function showVoiceTranscript() {
-            const html = voiceTranscriptLog.length ? voiceTranscriptLog.map(e => `<div class="mb-2"><strong>${e.role}:</strong> ${e.text}</div>`).join('') : '<p class="text-muted mb-0">No transcript yet. Start a voice conversation first.</p>';
-            document.getElementById('voiceTranscriptModalBody').innerHTML = html;
-            new bootstrap.Modal(document.getElementById('voiceTranscriptModal')).show();
-        }
     </script>
-
-    <!-- Voice Transcript Modal -->
-    <div class="modal fade" id="voiceTranscriptModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header ink-music-modal-header border-0">
-                    <h5 class="modal-title"><i class="fas fa-file-alt me-2" aria-hidden="true"></i>Conversation transcript</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="voiceTranscriptModalBody" style="max-height: 70vh; overflow-y: auto;">
-                    <p class="text-muted mb-0">No transcript yet.</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Create Artist Profile Modal -->
     <div class="modal fade" id="createArtistModal" tabindex="-1">

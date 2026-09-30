@@ -235,10 +235,10 @@
                                             <div class="mt-auto">
                                                 <div class="d-flex gap-2 ink-card-actions">
                                                     {% if book.audiobook_published and book.has_audiobook %}
-                                                    <a href="{{ url_for('book_platform.podcast_library') }}"
+                                                    <a href="{{ url_for('book_platform.audiobook_player', book_id=book.id) }}"
                                                        class="btn btn-outline-info btn-sm ink-mp-podcast-btn"
-                                                       aria-label="Podcast library">
-                                                        <i class="fas fa-podcast" aria-hidden="true"></i><span class="ink-mp-podcast-label">Podcast</span>
+                                                       aria-label="Listen to {{ book.title }}">
+                                                        <i class="fas fa-headphones" aria-hidden="true"></i><span class="ink-mp-podcast-label">Listen</span>
                                                     </a>
                                                     {% endif %}
                                                     <button type="button" class="btn btn-primary btn-sm ink-mp-cta ink-mp-view-btn flex-grow-1" onclick="viewBook({{ book.id }})" aria-label="View {{ book.title }}">

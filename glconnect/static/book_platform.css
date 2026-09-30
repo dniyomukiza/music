@@ -5784,31 +5784,6 @@ body.ink-music-dashboard .ink-music-status-icon {
     flex-shrink: 0;
 }
 
-body.ink-music-dashboard .ink-music-voice-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem 1.15rem;
-    margin-top: 1.25rem;
-    background: rgba(6, 8, 7, 0.55);
-    border-radius: 14px;
-    border: 1px solid rgba(42, 61, 50, 0.55);
-}
-
-body.ink-music-dashboard .ink-music-voice-strip .btn-outline-info {
-    border: 1px solid rgba(201, 162, 39, 0.35) !important;
-    color: #e8ece9 !important;
-    background: rgba(201, 162, 39, 0.1) !important;
-}
-
-body.ink-music-dashboard .ink-music-voice-strip .btn-outline-info:hover {
-    background: rgba(201, 162, 39, 0.2) !important;
-    border-color: rgba(201, 162, 39, 0.55) !important;
-    color: #fff !important;
-}
-
 body.ink-music-dashboard .ink-music-section-title {
     font-family: "Syne", sans-serif;
     font-weight: 700;

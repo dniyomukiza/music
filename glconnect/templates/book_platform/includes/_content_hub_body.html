@@ -76,14 +76,17 @@
                 <div class="card-body">
                     <h4 class="card-title">Books &amp; marketplace</h4>
                     <p class="card-text">
-                        Browse indie titles, support campaigns, and open your personal library of purchases and downloads.
+                        Browse indie titles, support campaigns, and set up an author profile.
                     </p>
                     <div class="mt-auto content-card-actions">
                         <a href="{{ url_for('book_platform.marketplace') }}" class="btn btn-modern btn-modern-primary">
                             Marketplace
                         </a>
-                        <a href="{{ url_for('book_platform.my_library') }}" class="btn btn-modern">
-                            My library
+                        <a href="{{ url_for('book_platform.book_cafe') }}" class="btn btn-modern">
+                            Book reviews
+                        </a>
+                        <a href="{{ url_for('book_platform.setup_profile', next=url_for('book_platform.marketplace')) }}" class="btn btn-modern">
+                            Authors
                         </a>
                     </div>
                 </div>
