@@ -12,6 +12,12 @@
   box-sizing: border-box;
 }
 
+body.auth-guest-page .auth-page-shell {
+  min-height: 100vh;
+  align-items: center;
+  padding-top: clamp(2rem, 6vw, 3.5rem);
+}
+
 .auth-page-shell::before {
   content: "";
   position: absolute;
@@ -277,6 +283,59 @@
 
 .auth-footer a:hover {
   color: #fff6d0;
+}
+
+.auth-reset-offer {
+  margin-top: 1.25rem;
+  padding: 1rem 1.05rem;
+  text-align: left;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.auth-reset-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e0bc3a;
+}
+
+.auth-reset-copy {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #c8d0cc;
+}
+
+.auth-reset-form {
+  margin: 0;
+}
+
+.auth-reset-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(201, 162, 39, 0.45);
+  border-radius: 10px;
+  background: transparent;
+  color: #e0bc3a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-reset-btn:hover {
+  background: rgba(201, 162, 39, 0.12);
+}
+
+.auth-reset-alt {
+  margin: 0.75rem 0 0;
+  font-size: 0.82rem;
+  color: #8b9690;
+}
+
+.auth-reset-alt a {
+  color: #e0bc3a;
 }
 
 @media (max-width: 600px) {

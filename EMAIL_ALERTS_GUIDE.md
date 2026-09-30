@@ -1,10 +1,10 @@
 # Email Alerts and Monitoring Guide
 
-This guide explains the email alerting system integrated with Mailtrap for monitoring your application.
+This guide explains the email alerting system integrated with Resend for monitoring your application.
 
 ## Overview
 
-The email alert system (`glconnect/email_alerts.py`) provides comprehensive monitoring and alerting capabilities for your application. It sends email notifications via Mailtrap for critical events, resource issues, and important application events.
+The email alert system (`glconnect/email_alerts.py`) provides comprehensive monitoring and alerting capabilities for your application. It sends email notifications via Resend for critical events, resource issues, and important application events.
 
 ## Alert Types
 
@@ -346,7 +346,7 @@ Ensure these are set in your `docker-compose.yml`:
 environment:
   - SENDER_MAIL=info@ndotonic.com
   - RECEIVER_MAIL=info@ndotonic.com
-  - MAIL_TRAP=your_mailtrap_api_key
+  - RESEND_API_KEY=re_xxxxxxxxx
 ```
 
 ### Customizing Thresholds
@@ -373,8 +373,8 @@ ALERT_COOLDOWN = 3600  # 1 hour
 
 ### Alerts Not Sending
 
-1. Check `MAIL_TRAP` environment variable is set
-2. Verify Mailtrap API key is valid
+1. Check `RESEND_API_KEY` environment variable is set (replace `re_xxxxxxxxx` with your real key)
+2. Verify the Resend API key is valid and the From domain is verified
 3. Check email service logs for errors
 4. Test with a simple alert:
    ```python

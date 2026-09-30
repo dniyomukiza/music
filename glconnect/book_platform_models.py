@@ -212,6 +212,7 @@ class BookProject(db.Model):
     # Note: Don't use backref here since authored_books already exists on BookPlatformUser
     author = db.relationship('BookPlatformUser', foreign_keys=[author_id], lazy=True, overlaps="authored_books")
     chapters = db.relationship('BookChapter', backref='book_project', lazy=True, cascade='all, delete-orphan')
+    reader_discussion_posts = db.relationship('ReaderBookPost', backref='book_project', lazy=True, cascade='all, delete-orphan')
     collaborations = db.relationship('BookCollaboration', backref='book_project', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('BookComment', backref='book_project', lazy=True, cascade='all, delete-orphan')
     versions = db.relationship('BookVersion', backref='book_project', lazy=True, cascade='all, delete-orphan')
@@ -601,6 +602,8 @@ class BookPrintOrder(db.Model):
     status = db.Column(db.Enum(PrintOrderStatus), default=PrintOrderStatus.PENDING_FULFILLMENT)
     tracking_number = db.Column(db.String(200), nullable=True)
     shipping_carrier = db.Column(db.String(100), nullable=True)
+    # Snapshot the handling promise at checkout; listing settings may change later.
+    handling_days = db.Column(db.Integer, nullable=True)
     expected_delivery_days = db.Column(db.Integer, nullable=True)
     shipped_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
@@ -813,6 +816,36 @@ class ReviewRequest(db.Model):
     reviewer = db.relationship('AccreditedReviewer', backref='review_requests')
     requested_by = db.relationship('BookPlatformUser', backref='sent_review_requests')
     review = db.relationship('BookReview', backref=db.backref('review_request', lazy=True), uselist=False, foreign_keys='BookReview.review_request_id')
+
+
+# Reader discussion models. These are intentionally separate from accredited author reviews.
+class ReaderBookPost(db.Model):
+    __tablename__ = 'reader_book_posts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    book_project_id = db.Column(db.Integer, db.ForeignKey('book_projects.id', ondelete='CASCADE'), nullable=True, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    external_book_title = db.Column(db.String(300), nullable=True)
+    external_book_author = db.Column(db.String(200), nullable=True)
+    external_book_cover_url = db.Column(db.String(1000), nullable=True)
+    content = db.Column(db.Text, nullable=False)
+    quote = db.Column(db.Text, nullable=True)
+    reading_status = db.Column(db.String(20), nullable=False, default='reading')
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    user = db.relationship('User', backref=db.backref('reader_book_posts', lazy=True))
+    comments = db.relationship('ReaderBookComment', backref='post', lazy=True, cascade='all, delete-orphan')
+
+
+class ReaderBookComment(db.Model):
+    __tablename__ = 'reader_book_comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('reader_book_posts.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'), nullable=False, index=True)
+    content = db.Column(db.Text, nullable=False)
+    image_url = db.Column(db.String(1000), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    user = db.relationship('User', backref=db.backref('reader_book_comments', lazy=True))
 
 
 # Book Review Model
@@ -1254,4 +1287,3 @@ class IsbnPoolEntry(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     book_project = db.relationship("BookProject", backref=db.backref("isbn_pool_entry", uselist=False))
-

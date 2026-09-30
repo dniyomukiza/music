@@ -5,8 +5,11 @@ Funded book campaigns (all projects):
   - Campaign pledges: 15% platform fee on collected funds (platform maintenance)
   - Author net: 85% of pledges (released at draft/publication milestones)
 
-Marketplace sales:
-  - 10% platform fee / 90% author royalty
+Marketplace sales (author royalties on list price; remainder is platform maintenance):
+  - Ebook / print: 90% author / 10% platform
+  - Audiobook: 70% author / 30% platform
+  - Bundle of 2+ formats: 80% author / 20% platform
+  - Print shipping and amounts above list price: 100% to author (not fee'd)
 """
 
 from __future__ import annotations
@@ -16,7 +19,15 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-MARKETPLACE_PLATFORM_FEE_PERCENT = 10.0
+# Marketplace platform maintenance fees (percent of list-price base)
+MARKETPLACE_PLATFORM_FEE_PERCENT_EBOOK = 10.0
+MARKETPLACE_PLATFORM_FEE_PERCENT_PRINT = 10.0
+MARKETPLACE_PLATFORM_FEE_PERCENT_AUDIOBOOK = 30.0
+MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE = 20.0  # 2+ formats in one purchase
+
+# Legacy default / ebook alias (single-format digital)
+MARKETPLACE_PLATFORM_FEE_PERCENT = MARKETPLACE_PLATFORM_FEE_PERCENT_EBOOK
+
 CAMPAIGN_PLATFORM_FEE_PERCENT = 15.0
 
 # Legacy aliases (first vs subsequent no longer differ)
@@ -24,13 +35,52 @@ CAMPAIGN_PLATFORM_FEE_PERCENT_FIRST = CAMPAIGN_PLATFORM_FEE_PERCENT
 CAMPAIGN_PLATFORM_FEE_PERCENT_SUBSEQUENT = CAMPAIGN_PLATFORM_FEE_PERCENT
 
 
-def marketplace_author_royalty_percent() -> float:
+def marketplace_author_royalty_percent(format_key: str | None = None) -> float:
     """Author share of marketplace list price (before extras like shipping)."""
-    return 100.0 - MARKETPLACE_PLATFORM_FEE_PERCENT
+    return 100.0 - marketplace_platform_fee_percent_for(format_key)
 
 
-def marketplace_author_royalty_fraction() -> float:
-    return marketplace_author_royalty_percent() / 100.0
+def marketplace_author_royalty_fraction(format_key: str | None = None) -> float:
+    return marketplace_author_royalty_percent(format_key) / 100.0
+
+
+def marketplace_platform_fee_percent_for(format_key: str | None = None) -> float:
+    """
+    Default platform maintenance fee % for a purchase/listing format key.
+    format_key: digital|ebook|audiobook|print|bundle|combo:...
+    """
+    fmt = (format_key or "digital").lower().strip()
+    if fmt.startswith("combo:"):
+        from glconnect.book_purchase_format import formats_from_purchase_format
+
+        fmts = formats_from_purchase_format(fmt)
+        if len(fmts) >= 2:
+            return MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE
+        if len(fmts) == 1:
+            return marketplace_platform_fee_percent_for(fmts[0])
+        return MARKETPLACE_PLATFORM_FEE_PERCENT_EBOOK
+    if fmt == "bundle":
+        return MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE
+    if fmt in ("audiobook", "audio"):
+        return MARKETPLACE_PLATFORM_FEE_PERCENT_AUDIOBOOK
+    if fmt == "print":
+        return MARKETPLACE_PLATFORM_FEE_PERCENT_PRINT
+    # digital / ebook / default
+    return MARKETPLACE_PLATFORM_FEE_PERCENT_EBOOK
+
+
+def marketplace_fee_schedule() -> dict[str, float]:
+    """Author royalty % by format for dashboards and copy."""
+    return {
+        "ebook": 100.0 - MARKETPLACE_PLATFORM_FEE_PERCENT_EBOOK,
+        "print": 100.0 - MARKETPLACE_PLATFORM_FEE_PERCENT_PRINT,
+        "audiobook": 100.0 - MARKETPLACE_PLATFORM_FEE_PERCENT_AUDIOBOOK,
+        "bundle": 100.0 - MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE,
+        "platform_fee_ebook": MARKETPLACE_PLATFORM_FEE_PERCENT_EBOOK,
+        "platform_fee_print": MARKETPLACE_PLATFORM_FEE_PERCENT_PRINT,
+        "platform_fee_audiobook": MARKETPLACE_PLATFORM_FEE_PERCENT_AUDIOBOOK,
+        "platform_fee_bundle": MARKETPLACE_PLATFORM_FEE_PERCENT_BUNDLE,
+    }
 
 
 def is_author_first_funded_project(campaign: Any, db: Any) -> bool:
@@ -135,4 +185,5 @@ def campaign_fee_summary(campaign: Any, db: Any | None = None) -> dict[str, Any]
         'platform_fee_amount': platform_fee,
         'author_net_funding': author_net,
         'marketplace_platform_fee_percent': MARKETPLACE_PLATFORM_FEE_PERCENT,
+        'marketplace_fee_schedule': marketplace_fee_schedule(),
     }

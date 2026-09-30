@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Ndotonic, Turning stories into published books. Author platform with Ink Studio and AI editing; GLC Media is our radio &amp; TV stream promoting stories and books.">
-    <title>About | Ndotonic, Turning stories into published books</title>
-    <link rel="canonical" href="https://ndotonic.com/about">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/ndotonic.png') }}">
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/ndotonic.png') }}">
+    <meta name="description" content="Ndotonic, Turning stories into published books. Author platform with Ink Studio and AI tools; GLC Media is our radio &amp; TV stream for stories and books.">
+    <meta name="robots" content="index,follow">
+    <title>Ndotonic | Turning stories into published books</title>
+    <link rel="canonical" href="https://ndotonic.com/">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/ndotonic_official.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/ndotonic_official.png') }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Ndotonic">
     <meta property="og:title" content="Ndotonic, Turning stories into published books">
-    <meta property="og:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media promotes your stories and books on radio &amp; TV.">
-    <meta property="og:url" content="https://ndotonic.com/about">
-    <meta property="og:image" content="{{ url_for('static', filename='images/ndotonic.png', _external=True) }}">
+    <meta property="og:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media is your radio &amp; TV stream for stories and books.">
+    <meta property="og:url" content="https://ndotonic.com/">
+    <meta property="og:image" content="{{ url_for('static', filename='images/ndotonic_official.png', _external=True) }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Ndotonic, Turning stories into published books">
-    <meta name="twitter:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media promotes your stories and books on radio &amp; TV.">
-    <meta name="twitter:image" content="{{ url_for('static', filename='images/ndotonic.png', _external=True) }}">
+    <meta name="twitter:description" content="Pitch, fund, write with AI in Ink Studio, publish, and monetize. GLC Media is your radio &amp; TV stream for stories and books.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/ndotonic_official.png', _external=True) }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='company_footer.css') }}?v=1">
-    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=14">
+    <link rel="stylesheet" href="{{ url_for('static', filename='about.css') }}?v=16">
 </head>
 <body class="about-body">
 
@@ -45,7 +46,7 @@
                             Turning <em>stories</em> into published books
                         </h1>
                         <p class="about-hero-sub ab-enter ab-enter-3">
-                            Pitch, fund, write with AI in Ink Studio, publish, and monetize, all in one place.
+                            Pitch, Fund, Write, Publish, GLC Media and Monetize, all in one place.
                         </p>
                         <div class="about-hero-actions ab-enter ab-enter-4">
                             <a class="about-cta about-cta--primary" href="{{ url_for('routes1.register') }}">
@@ -74,10 +75,11 @@
                     <div class="about-bento-top">
                         <span class="about-bento-num">01</span>
                     </div>
-                    <h3>Get Discovered</h3>
-                    <p>Upload a pitch and launch your book funding campaign.</p>
-                    <a href="{{ url_for('book_platform.campaigns') }}" class="about-bento-link">
-                        Browse campaigns <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <h3>Get discovered</h3>
+                    <p>Pitch your book idea and launch your funding campaign</p>
+                    <a href="{{ about_nav.campaigns }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        Book Campaigns{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
 
@@ -85,10 +87,11 @@
                     <div class="about-bento-top">
                         <span class="about-bento-num">02</span>
                     </div>
-                    <h3>Promote Your Story</h3>
-                    <p>Share your story on GLC Media, our radio &amp; TV stream promoting authors' stories and books.</p>
-                    <a href="{{ url_for('book_platform.publicity_promotion') }}" class="about-bento-link">
-                        GLC Media &amp; publicity <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <h3>Promote your book story on GLC Media</h3>
+                    <p>Live talkshows, interviews, blogs, discussions and music</p>
+                    <a href="{{ about_nav.promote }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        GLC Media{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
 
@@ -101,11 +104,12 @@
                     <p>Write your book in Ink studio, use AI toolkit for editing, get ISBN and publish.</p>
                     <div class="about-bento-tags">
                         <span class="about-tag">Ink Studio</span>
-                        <span class="about-tag">AI editing</span>
+                        <span class="about-tag">AI tools</span>
                         <span class="about-tag">ISBN ready</span>
                     </div>
-                    <a href="{{ url_for('book_platform.ink_studio_access') }}" class="about-bento-link">
-                        Start writing in Ink Studio <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <a href="{{ about_nav.write }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        Start Book{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
 
@@ -115,23 +119,11 @@
                     </div>
                     <h3>Monetize your work</h3>
                     <p>Sell your ebook, audiobook or ship to your customer.</p>
-                    <a href="{{ url_for('book_platform.marketplace') }}" class="about-bento-link">
-                        Marketplace <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                    <a href="{{ about_nav.sell }}" class="about-bento-link{% if not is_authenticated %} about-bento-link--gated{% endif %}"{% if not is_authenticated %} title="Sign in required"{% endif %}>
+                        Marketplace{% if not is_authenticated %} <i class="fas fa-lock about-link-lock" aria-hidden="true"></i>{% endif %}
+                        <i class="fas fa-arrow-right" aria-hidden="true"></i>
                     </a>
                 </article>
-            </div>
-        </section>
-
-        <section class="about-pipeline about-wrap about-reveal" aria-label="Author workflow">
-            <div class="about-pipeline-shell">
-                <div class="about-pipeline-track">
-                    <a href="{{ about_nav.pitch }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Pitch</strong><span>Campaign &amp; funding</span></a>
-                    <a href="{{ about_nav.fund }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Fund</strong><span>Patron support</span></a>
-                    <a href="{{ about_nav.write }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Write</strong><span>Ink Studio</span></a>
-                    <a href="{{ about_nav.publish }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Publish</strong><span>ISBN &amp; formats</span></a>
-                    <a href="{{ about_nav.promote }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Promote</strong><span>GLC Media — radio &amp; TV</span></a>
-                    <a href="{{ about_nav.sell }}" class="about-pipeline-step"><div class="about-pipeline-dot"></div><strong>Sell</strong><span>Ebook · audio · print</span></a>
-                </div>
             </div>
         </section>
 

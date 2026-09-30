@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Memory analysis script for the music application.
-This script analyzes memory usage patterns and identifies potential leaks.
+this script analyzes memory usage patterns and identifies potential leaks.
 """
 
 import psutil

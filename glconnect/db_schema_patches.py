@@ -14,6 +14,46 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 
+def ensure_reader_book_discussion_schema(db) -> None:
+    """Catch up the Book Café tables/columns on older PostgreSQL deployments."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        if db.engine.dialect.name != "postgresql":
+            return
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS reader_book_posts (
+                id SERIAL PRIMARY KEY,
+                book_project_id INTEGER REFERENCES book_projects(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                external_book_title VARCHAR(300), external_book_author VARCHAR(200),
+                external_book_cover_url VARCHAR(1000), content TEXT NOT NULL,
+                quote TEXT, reading_status VARCHAR(20) DEFAULT 'reading',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_title VARCHAR(300)"))
+        db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_author VARCHAR(200)"))
+        db.session.execute(text("ALTER TABLE reader_book_posts ADD COLUMN IF NOT EXISTS external_book_cover_url VARCHAR(1000)"))
+        db.session.execute(text("ALTER TABLE reader_book_posts ALTER COLUMN book_project_id DROP NOT NULL"))
+        db.session.execute(text("""
+            CREATE TABLE IF NOT EXISTS reader_book_comments (
+                id SERIAL PRIMARY KEY,
+                post_id INTEGER NOT NULL REFERENCES reader_book_posts(id) ON DELETE CASCADE,
+                user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                content TEXT NOT NULL, image_url VARCHAR(1000),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.session.execute(text("ALTER TABLE reader_book_comments ADD COLUMN IF NOT EXISTS image_url VARCHAR(1000)"))
+        db.session.commit()
+        logger.info("Book Café discussion schema verified.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch Book Café schema: %s", e, exc_info=True)
+        raise
+
+
 def ensure_investment_campaign_milestone_schema(db) -> None:
     """Add missing milestone columns / payout_requests table if not present."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
@@ -919,6 +959,7 @@ def ensure_book_print_orders_schema(db) -> None:
                         status VARCHAR(40) NOT NULL DEFAULT 'pending_fulfillment',
                         tracking_number VARCHAR(200),
                         shipping_carrier VARCHAR(100),
+                        handling_days INTEGER,
                         expected_delivery_days INTEGER,
                         shipped_at TIMESTAMP,
                         created_at TIMESTAMP,
@@ -955,6 +996,7 @@ def ensure_book_print_orders_schema(db) -> None:
                         status VARCHAR(40) NOT NULL DEFAULT 'pending_fulfillment',
                         tracking_number VARCHAR(200),
                         shipping_carrier VARCHAR(100),
+                        handling_days INTEGER,
                         expected_delivery_days INTEGER,
                         shipped_at TIMESTAMP,
                         created_at TIMESTAMP,
@@ -1024,7 +1066,7 @@ def ensure_book_print_order_shipping_note_column(db) -> None:
 
 
 def ensure_book_print_order_fulfillment_columns(db) -> None:
-    """Add shipping_carrier and expected_delivery_days for author fulfillment."""
+    """Add shipment and handling-promise columns for author fulfillment."""
     if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
         return
     try:
@@ -1070,6 +1112,19 @@ def ensure_book_print_order_fulfillment_columns(db) -> None:
             else:
                 db.session.execute(
                     text("ALTER TABLE book_print_orders ADD COLUMN shipping_carrier VARCHAR(100)")
+                )
+            changed = True
+        if "handling_days" not in cols:
+            if dialect == "postgresql":
+                db.session.execute(
+                    text(
+                        "ALTER TABLE book_print_orders ADD COLUMN IF NOT EXISTS "
+                        "handling_days INTEGER"
+                    )
+                )
+            else:
+                db.session.execute(
+                    text("ALTER TABLE book_print_orders ADD COLUMN handling_days INTEGER")
                 )
             changed = True
         if "expected_delivery_days" not in cols:
@@ -1651,3 +1706,126 @@ CREATE TABLE IF NOT EXISTS author_format_listing_coupons (
         db.session.rollback()
         logger.error("Could not patch author format listing coupons schema: %s", e, exc_info=True)
 
+
+def _pg_enum_labels(db, type_name: str) -> list[str]:
+    rows = db.session.execute(
+        text(
+            "SELECT e.enumlabel FROM pg_enum e "
+            "JOIN pg_type t ON e.enumtypid = t.oid "
+            "WHERE t.typname = :type_name "
+            "ORDER BY e.enumsortorder"
+        ),
+        {"type_name": type_name},
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
+def ensure_collaboration_role_enum_schema(db) -> None:
+    """Ensure PostgreSQL CollaborationRole enum includes every value defined in the app."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        if db.engine.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Collaboration role enum patch: dialect check failed: %s", e)
+        return
+
+    try:
+        from glconnect.book_platform_models import CollaborationRole
+
+        required_values = [role.value for role in CollaborationRole]
+    except Exception as e:
+        logger.warning("Collaboration role enum patch: could not load roles: %s", e)
+        return
+
+    candidate_types = ("collaborationrole", "collaboration_role")
+
+    try:
+        patched = False
+        for type_name in candidate_types:
+            labels = set(_pg_enum_labels(db, type_name))
+            if not labels:
+                continue
+            for value in required_values:
+                if value in labels:
+                    continue
+                logger.info(
+                    "Adding missing CollaborationRole enum value %r to PostgreSQL type %s",
+                    value,
+                    type_name,
+                )
+                db.session.execute(
+                    text(f"ALTER TYPE {type_name} ADD VALUE IF NOT EXISTS '{value}'")
+                )
+                patched = True
+        if patched:
+            db.session.commit()
+            logger.info("Collaboration role enum patch applied.")
+        else:
+            db.session.rollback()
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch CollaborationRole enum: %s", e, exc_info=True)
+
+
+def ensure_parallel_news_monitor_schema(db) -> None:
+    """Create the Parallel newsroom inbox tables on existing PostgreSQL deployments."""
+    if os.getenv("INK_STUDIO_SKIP_SCHEMA_PATCH") == "1":
+        return
+    try:
+        if db.engine.dialect.name != "postgresql":
+            return
+    except Exception as e:
+        logger.warning("Parallel news monitor schema: dialect check failed: %s", e)
+        return
+
+    statements = [
+        """
+        CREATE TABLE IF NOT EXISTS parallel_news_monitors (
+            id SERIAL PRIMARY KEY,
+            parallel_monitor_id VARCHAR(128) UNIQUE NOT NULL,
+            topic VARCHAR(255) NOT NULL,
+            desk VARCHAR(32) NOT NULL DEFAULT 'news',
+            query TEXT NOT NULL,
+            frequency VARCHAR(16) NOT NULL DEFAULT '1d',
+            processor VARCHAR(16) NOT NULL DEFAULT 'lite',
+            status VARCHAR(32) NOT NULL DEFAULT 'active',
+            created_by_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+            last_event_at TIMESTAMP,
+            last_error TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS parallel_news_events (
+            id SERIAL PRIMARY KEY,
+            monitor_id INTEGER NOT NULL REFERENCES parallel_news_monitors(id) ON DELETE CASCADE,
+            parallel_event_id VARCHAR(160) UNIQUE NOT NULL,
+            event_group_id VARCHAR(160) NOT NULL,
+            event_date VARCHAR(32),
+            content TEXT NOT NULL,
+            citations TEXT,
+            confidence VARCHAR(32),
+            is_read BOOLEAN NOT NULL DEFAULT FALSE,
+            received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_monitors_parallel_monitor_id ON parallel_news_monitors(parallel_monitor_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_monitors_topic ON parallel_news_monitors(topic)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_monitors_status ON parallel_news_monitors(status)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_monitor_id ON parallel_news_events(monitor_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_parallel_event_id ON parallel_news_events(parallel_event_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_event_group_id ON parallel_news_events(event_group_id)",
+        "CREATE INDEX IF NOT EXISTS ix_parallel_news_events_is_read ON parallel_news_events(is_read)",
+    ]
+    try:
+        for statement in statements:
+            db.session.execute(text(statement))
+        db.session.commit()
+        logger.info("Parallel news monitor schema verified.")
+    except Exception as e:
+        db.session.rollback()
+        logger.error("Could not patch Parallel news monitor schema: %s", e, exc_info=True)
+        raise

@@ -30,9 +30,40 @@
                         <small class="opacity-75">Invite patrons who believe in your story. Contributions help you finish and publish, not financial returns for backers.</small>
                     </div>
                     <div class="card-body">
-                        <form method="POST" class="row g-4">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+                        {% endwith %}
+
+                        {% if investment_readiness and not investment_readiness.is_ready %}
+                        <div class="alert alert-warning border-0 mb-4" role="status">
+                            <h2 class="h5 mb-2"><i class="fas fa-list-check me-2"></i>Finish these steps before launching</h2>
+                            <p class="small mb-3">Funding opens when your manuscript meets the minimum campaign bar. Complete the items below, then return here.</p>
+                            {% with prefix='create-campaign', intro_prefix='Progress:', requirements_interactive=false %}
+                            {% include 'book_platform/includes/_campaign_requirements_progress.html' %}
+                            {% endwith %}
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a href="{{ url_for('book_platform.view_book', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-arrow-left me-1"></i>Back to book
+                                </a>
+                                <a href="{{ url_for('book_platform.create_chapter', book_id=book.id) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i>Add section
+                                </a>
+                                <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-pen me-1"></i>Book settings
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <form method="POST">
                             {{ form.hidden_tag() }}
-                            <div class="col-lg-7">
+                            <div>
                             
                             <div class="mb-3">
                                 {{ form.title.label(class="form-label") }}
@@ -48,7 +79,6 @@
                                 {% set project_desc_field_id = 'description' %}
                                 {% set project_desc_book_id = book.id %}
                                 {% set project_desc_upload_url = url_for('book_platform.upload_project_description_media', book_id=book.id) %}
-                                {% set project_desc_preview_target = 'inkPreviewCampaignPitch' %}
                                 {% set show_media_guide = false %}
                                 {% include 'book_platform/_project_description_editor.html' %}
                                 <div class="form-text">Tell patrons why they should back this project now.</div>
@@ -60,7 +90,7 @@
                             <div class="mb-3">
                                 {{ form.tentative_timeline.label(class="form-label") }}
                                 {{ form.tentative_timeline(class="form-control", id="tentative_timeline") }}
-                                <div class="form-text">When you expect to finish the manuscript or publish to the marketplace.</div>
+                                <div class="form-text">Required. Give supporters a realistic draft and marketplace-launch target.</div>
                                 {% if form.tentative_timeline.errors %}
                                     <div class="text-danger small">{{ form.tentative_timeline.errors[0] }}</div>
                                 {% endif %}
@@ -78,7 +108,7 @@
                                 <div class="col-md-6">
                                     {{ form.funding_goal.label(class="form-label") }}
                                     {{ form.funding_goal(class="form-control") }}
-                                    <div class="form-text">How much patron support you hope to raise. Projects can receive more than this goal.</div>
+                                    <div class="form-text">Set the amount needed to finish and publish. Funding closes once this goal is reached; missed goals are refunded after the campaign window.</div>
                                     {% if form.funding_goal.errors %}
                                         <div class="text-danger small">{{ form.funding_goal.errors[0] }}</div>
                                     {% endif %}
@@ -114,39 +144,13 @@
                                 {{ form.submit(class="btn btn-primary btn-lg") }}
                             </div>
                             </div>
-
-                            <div class="col-lg-5">
-                                <div class="ink-project-preview-sticky">
-                                    {% set ink_preview_about_id = 'inkPreviewAboutProject' %}
-                                    {% set ink_preview_pitch_id = 'inkPreviewCampaignPitch' %}
-                                    {% set ink_preview_timeline_id = 'inkPreviewTimeline' %}
-                                    {% set ink_preview_timeline_input_id = 'tentative_timeline' %}
-                                    {% include 'book_platform/_project_description_preview.html' %}
-                                    <p class="small text-muted mt-3 mb-0">
-                                        "About the project" comes from your
-                                        <a href="{{ url_for('book_platform.edit_book', book_id=book.id) }}">book description</a>.
-                                        Edit it there or after launch from <strong>Edit project</strong>.
-                                    </p>
-                                </div>
-                            </div>
                         </form>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-    (function () {
-        var about = document.getElementById('inkPreviewAboutProject');
-        var initialAbout = {{ (book.description or '')|tojson }};
-        if (about) {
-            about.innerHTML = initialAbout && initialAbout.trim()
-                ? initialAbout
-                : '<p class="text-white-50 mb-0">Add a book description on the edit book page to show "About the project".</p>';
-        }
-    })();
-    </script>
 
     {% include 'includes/_ndotonic_mission_footer.html' %}
 

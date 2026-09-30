@@ -571,16 +571,28 @@
                                 <span class="ink-lib-badge pending">Preparing to ship</span>
                                 {% elif order.status.value == 'shipped' %}
                                 <span class="ink-lib-badge shipped">Shipped</span>
+                                {% elif order.status.value == 'completed' %}
+                                <span class="ink-lib-badge shipped">Delivered</span>
                                 {% endif %}
                             </div>
                             {% if order.status.value == 'pending_fulfillment' %}
-                            {% set handling = book.print_handling_days if book and book.print_handling_days else 7 %}
+                            {% set handling = order.handling_days if order.handling_days else (book.print_handling_days if book and book.print_handling_days else 7) %}
                             <p class="ink-lib-print-detail mb-0">The author is preparing your book. Typical handling time is about <strong>{{ handling }} business day{% if handling != 1 %}s{% endif %}</strong> before shipment. We’ll email you when it ships.</p>
+                            {% if order.ship_by_date %}
+                            <p class="ink-lib-print-detail mb-0">Promised ship-by date: <strong>{{ order.ship_by_date.strftime('%b %d, %Y') }}</strong>.</p>
+                            {% endif %}
                             {% else %}
                             {% if order.shipping_carrier %}<p class="ink-lib-print-detail mb-1"><strong>Shipping company:</strong> {{ order.shipping_carrier }}</p>{% endif %}
                             {% if order.tracking_number %}<p class="ink-lib-print-detail mb-1"><strong>Tracking number:</strong> {{ order.tracking_number }}</p>{% endif %}
                             {% if order.expected_delivery_days %}<p class="ink-lib-print-detail mb-1"><strong>Expected delivery:</strong> about {{ order.expected_delivery_days }} business day{% if order.expected_delivery_days != 1 %}s{% endif %} from ship date</p>{% endif %}
                             {% if order.shipped_at %}<p class="ink-lib-print-detail mb-0"><strong>Shipped:</strong> {{ order.shipped_at.strftime('%b %d, %Y') }}</p>{% endif %}
+                            {% if order.status.value == 'shipped' %}
+                            <form method="post" action="{{ url_for('book_platform.mark_print_order_received', order_id=order.id) }}" class="mt-2"
+                                  onsubmit="return confirm('Mark this print order as delivered?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success">Mark as delivered</button>
+                            </form>
+                            {% endif %}
                             {% endif %}
                         </div>
                     </div>

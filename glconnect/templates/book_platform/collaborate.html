@@ -214,26 +214,17 @@
         document.getElementById('inviteForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-            fetch('/mybook/books/{{ book.id }}/invite', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: formData.get('email'),
-                    role: formData.get('role'),
-                    message: formData.get('message')
-                })
+            inkCollabPost('/mybook/books/{{ book.id }}/invite', {
+                email: formData.get('email'),
+                role: formData.get('role'),
+                message: formData.get('message'),
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '{{ url_for("book_platform.collaborate", book_id=book.id) }}?invited=1';
-                } else {
-                    alert('Failed to send invitation: ' + (data.error || 'Unknown error'));
-                }
+            .then(() => {
+                window.location.href = '{{ url_for("book_platform.view_book", book_id=book.id) }}?invited=1';
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to send invitation. Please try again.');
+                alert(error.message || 'Failed to send invitation. Please try again.');
             });
         });
 

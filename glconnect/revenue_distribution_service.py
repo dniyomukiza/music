@@ -37,6 +37,16 @@ def distribute_revenue(book_sale, db):
             RevenueDistribution, ReviewerEarning,
             DistributionType, TransactionStatus,
         )
+
+        # Never book royalties or increment sales for an unpaid checkout.
+        # Stripe can deliver success/webhook events out of order, so the
+        # completed status is the accounting boundary.
+        if getattr(book_sale, "status", None) != TransactionStatus.COMPLETED:
+            return {
+                'success': False,
+                'deferred': True,
+                'error': 'Revenue distribution requires a completed sale.',
+            }
         
         # Get the book project with all related data
         book = BookProject.query.options(
@@ -57,12 +67,14 @@ def distribute_revenue(book_sale, db):
         sale_amount = book_sale.net_amount + book_sale.platform_fee  # Total sale amount
         distributions = []
         
-        # 1. Platform Fee (10%)
-        platform_amount = sale_amount * (PLATFORM_FEE_PERCENTAGE / 100)
+        # 1. Platform fee: use the immutable fee captured on the sale at
+        # checkout. Recalculating a generic 10% here would double-charge or
+        # undercharge audiobook and bundle transactions.
+        platform_amount = max(0.0, float(book_sale.platform_fee or 0.0))
         platform_dist = RevenueDistribution(
             distribution_type=DistributionType.PLATFORM,
             amount=platform_amount,
-            percentage=PLATFORM_FEE_PERCENTAGE,
+            percentage=(platform_amount / sale_amount * 100.0) if sale_amount else 0.0,
             currency=book_sale.currency,
             status=TransactionStatus.COMPLETED,
             paid_at=datetime.now(timezone.utc),
@@ -127,7 +139,7 @@ def distribute_revenue(book_sale, db):
         investor_total = 0.0
 
         # 4. Author gets the remainder
-        author_amount = sale_amount - platform_amount - reviewer_total - investor_total
+        author_amount = max(0.0, sale_amount - platform_amount - reviewer_total - investor_total)
         author_dist = RevenueDistribution(
             distribution_type=DistributionType.AUTHOR,
             amount=author_amount,
@@ -189,4 +201,3 @@ def calculate_reviewer_earnings(review, sale_amount):
         return 0.0
     
     return sale_amount * (review.revenue_share_percentage / 100)
-

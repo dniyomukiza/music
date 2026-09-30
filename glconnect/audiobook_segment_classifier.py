@@ -271,7 +271,8 @@ def suggest_includes_for_chapters(
                 "reading_order": ch.get("reading_order", ch.get("chapter_number")),
                 "ai_include": ai_inc,
                 "ai_reason": ai_reas,
-                "include": ai_inc,
+                "include": False,
+                "is_section_complete": ch.get("is_section_complete"),
             }
         )
 
