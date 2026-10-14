@@ -11939,7 +11939,6 @@ def news_redirect():
 @login_required
 def upload_podcast():
     """Upload a podcast episode for GLC Media promotion — max 30 minutes, requires admin approval."""
-    return jsonify({'error': 'Podcast submissions have been retired.'}), 410
     if request.method == 'GET':
         from glconnect.models import PodcastSubmission
         user_podcasts = PodcastSubmission.query.filter_by(user_id=current_user.user_id).order_by(
