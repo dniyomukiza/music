@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <meta name="description" content="Ink Studio music dashboard, search, and queue.">
-    <title>Music Dashboard | Ink Studio</title>
+    <meta name="description" content="Play GLC Radio originals.">
+    <title>Music | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -70,148 +70,258 @@
         </div>
     </nav>
 
-    <main id="ink-music-main" class="pb-5" tabindex="-1">
-    <div class="container py-4 py-md-5 px-3 px-md-4">
-        <header class="ink-music-hero mb-4 mb-lg-5">
-            <p class="ink-music-eyebrow mb-0">Ink Studio · Music</p>
-            <p class="ink-music-lead">Search the catalog and build your queue, optimized for focus and flow.</p>
-            <div class="ink-music-pills" role="list">
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-wave-square me-1" aria-hidden="true"></i>High fidelity stream</span>
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-list-ol me-1" aria-hidden="true"></i>Smart queue</span>
-            </div>
-        </header>
-
-        {% if not has_artist_profile %}
-        <div class="row mb-4 mb-lg-5">
-            <div class="col-12">
-                {% if is_artist_account %}
-                <div class="card music-card ink-music-panel">
-                    <div class="card-header d-flex align-items-center gap-3 flex-wrap border-0 pb-0">
-                        <div class="ink-music-status-icon" aria-hidden="true"><i class="fas fa-star"></i></div>
-                        <div>
-                            <h2 class="h5 mb-1">Claim your stage</h2>
-                            <p class="text-muted small mb-0">Create your artist profile to upload tracks and reach listeners.</p>
-                        </div>
-                    </div>
-                    <div class="card-body pt-3">
-                        <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createArtistModal">
-                            <i class="fas fa-user-plus me-2" aria-hidden="true"></i>Set up artist profile
-                        </button>
-                    </div>
-                </div>
-                {% else %}
-                <div class="card music-card ink-music-panel">
-                    <div class="card-header d-flex align-items-center gap-3 flex-wrap border-0 pb-0">
-                        <div class="ink-music-status-icon" aria-hidden="true"><i class="fas fa-lock"></i></div>
-                        <div>
-                            <h2 class="h5 mb-1">Upload access locked</h2>
-                            <p class="text-muted small mb-0">Listener accounts can browse and queue music. Register as an artist to distribute your own tracks.</p>
-                        </div>
-                    </div>
-                    <div class="card-body pt-3">
-                        <a href="{{ url_for('routes1.register') }}" class="btn btn-outline-light rounded-pill px-4">
-                            Switch to artist
-                        </a>
-                    </div>
-                </div>
+    <main id="ink-music-main" tabindex="-1">
+        <div class="container glc-listen">
+            <div class="glc-listen-head" id="searchMusicCard">
+                <form class="glc-search autocomplete-container" onsubmit="event.preventDefault(); searchMusic();">
+                    <label for="musicSearchInput" class="visually-hidden">Search artists or tracks</label>
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" id="musicSearchInput" placeholder="Search songs" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                </form>
+                {% if has_artist_profile and is_artist_account %}
+                <button type="button" class="glc-release" data-bs-toggle="modal" data-bs-target="#uploadSongModal">Release a track</button>
+                {% elif is_artist_account %}
+                <button type="button" class="glc-release" data-bs-toggle="modal" data-bs-target="#createArtistModal">Artist profile</button>
                 {% endif %}
             </div>
-        </div>
-        {% else %}
-        <div class="row mb-4 mb-lg-5">
-            <div class="col-12">
-                <div class="card music-card ink-music-panel">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3 border-0 pb-0">
-                        <div class="d-flex align-items-center gap-3 flex-wrap">
-                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(45, 106, 79, 0.35); color: #b8e0ce; border: 1px solid rgba(45, 106, 79, 0.5);"><i class="fas fa-check-circle me-1" aria-hidden="true"></i> Verified</span>
-                            <h2 class="h5 mb-0">{{ artist_profile.artist_name }}</h2>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
-                                View profile
-                            </a>
-                            {% if is_artist_account %}
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
-                                <i class="fas fa-upload me-1" aria-hidden="true"></i>Release track
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
+            <div id="autocompleteSuggestions" class="autocomplete-suggestions" role="listbox" aria-label="Search suggestions"></div>
+            <div id="inkMusicResultsCol">
+                <div id="searchResultsContainer" class="glc-tracks" aria-live="polite">
+                    <p class="glc-tracks-status">Loading songs…</p>
                 </div>
             </div>
         </div>
-        {% endif %}
-
-        <div class="row mb-4 mb-lg-5" id="searchCardRow">
-            <div class="col-12">
-                <div class="card music-card" id="searchMusicCard">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h2 class="h5 mb-0"><i class="fas fa-search me-2" style="color: var(--primary-color);" aria-hidden="true"></i>Discover</h2>
-                        <span class="playlist-badge rounded-pill"><i class="fas fa-headphones me-1" aria-hidden="true"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
-                    </div>
-                    <div class="card-body p-4" style="overflow: visible !important; position: relative;">
-                        <div class="row g-3 align-items-center" style="overflow: visible !important;">
-                            <div class="col-lg-10" style="position: relative; overflow: visible !important;">
-                                <div class="autocomplete-container" style="position: relative; z-index: 1;">
-                                    <label for="musicSearchInput" class="visually-hidden">Search artists or tracks</label>
-                                    <div class="input-group input-group-lg">
-                                        <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fas fa-search" aria-hidden="true"></i></span>
-                                        <input type="text" id="musicSearchInput" class="form-control border-start-0 ps-0" placeholder="Search GLC Radio originals…" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
-                                        <button type="button" class="btn btn-primary px-4 ms-2 rounded-pill" onclick="searchMusic()">Search</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-2 text-lg-end">
-                                <button type="button" class="btn btn-outline-light btn-lg w-100 rounded-pill" onclick="loadPlaylist()">
-                                    <i class="fas fa-sync me-1" aria-hidden="true"></i>Sync queue
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="autocompleteSuggestions" class="autocomplete-suggestions" role="listbox" aria-label="Search suggestions"></div>
-
-        <div class="row g-4 g-lg-5">
-            <div class="col-lg-7" id="inkMusicResultsCol">
-                <h2 class="ink-music-section-title"><span class="ink-music-section-icon" aria-hidden="true"><i class="fas fa-compact-disc"></i></span>Browsing</h2>
-                <div class="card music-card bg-transparent border-0 shadow-none">
-                    <div class="card-body p-0">
-                        <div id="searchResultsContainer" class="row g-3">
-                            <div class="col-12 ink-music-empty">
-                                <div class="ink-music-empty-visual" aria-hidden="true">
-                                    <i class="fas fa-headphones-alt fa-2x text-muted"></i>
-                                </div>
-                                <h3 class="h6 text-light mb-2">Start exploring</h3>
-                                <p class="text-muted small mb-0">Type an artist or song to load results here.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-5">
-                <h2 class="ink-music-section-title"><span class="ink-music-section-icon" aria-hidden="true"><i class="fas fa-forward"></i></span>Up next</h2>
-                <div class="card music-card h-100">
-                    <div class="card-body" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
-                        <div id="playlistContainer" class="playlist-container">
-                            <div class="text-center py-5">
-                                <i class="fas fa-spinner fa-spin text-muted me-2" aria-hidden="true"></i><span class="text-muted">Loading queue…</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     </main>
+
+    <section class="glc-player" id="glcPlayer" aria-label="Now playing">
+        <div class="glc-player-now">
+            <div class="glc-player-art" id="glcPlayerArt" aria-hidden="true">♪</div>
+            <div class="glc-player-meta">
+                <p class="glc-player-title" id="glcPlayerTitle">GLC Radio</p>
+                <p class="glc-player-artist" id="glcPlayerArtist">Choose a song</p>
+            </div>
+        </div>
+        <div class="glc-player-transport">
+            <button type="button" class="glc-icon-btn" id="glcPrev" aria-label="Previous song"><i class="fas fa-step-backward" aria-hidden="true"></i></button>
+            <button type="button" class="glc-play-btn" id="glcPlay" aria-label="Play"><i class="fas fa-play" aria-hidden="true"></i></button>
+            <button type="button" class="glc-icon-btn" id="glcNext" aria-label="Next song"><i class="fas fa-step-forward" aria-hidden="true"></i></button>
+            <span class="glc-time" id="glcElapsed">0:00</span>
+            <input type="range" id="glcScrub" min="0" max="0" value="0" step="0.1" aria-label="Song position">
+            <span class="glc-time" id="glcDuration">0:00</span>
+        </div>
+        <div class="glc-player-side">
+            <label class="glc-volume">
+                <i class="fas fa-volume-up" aria-hidden="true"></i>
+                <input type="range" id="glcVolume" min="0" max="1" step="0.01" value="0.9" aria-label="Volume">
+            </label>
+            <button type="button" class="glc-next-toggle" id="glcNextToggle" aria-expanded="false" aria-controls="glcNextPanel">Up next</button>
+        </div>
+    </section>
+    <div class="glc-next-panel" id="glcNextPanel" hidden>
+        <p class="glc-next-label">Up next</p>
+        <div id="glcNextList"></div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const userId = {{ current_user.user_id if current_user.is_authenticated else 'null' }};
-        
+        const glcAudio = new Audio();
+        glcAudio.preload = 'none';
+        let glcQueue = [];
+        let glcIndex = -1;
+        let glcCurrent = null;
+        let glcScrubbing = false;
+
+        function glcEsc(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+            });
+        }
+
+        function glcNormalize(song) {
+            let name = (song.name || '').trim();
+            let artist = (song.artist || '').trim();
+            const byPattern = /^\s*by\s+(.+)$/i;
+            if (byPattern.test(name)) {
+                const extracted = name.match(byPattern)[1].trim();
+                if (!artist || artist === 'Unknown' || artist === 'Unknown Artist') artist = extracted;
+                name = '';
+            }
+            const path = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : '');
+            return {
+                song_id: song.song_id != null ? song.song_id : null,
+                download_id: song.download_id != null ? song.download_id : null,
+                name: name || 'Untitled Track',
+                artist: artist || 'GLC Radio',
+                path: path,
+                cover: song.cover_image || song.artist_profile_pic || ''
+            };
+        }
+
+        function glcClock(seconds) {
+            const total = Math.max(0, Math.floor(seconds || 0));
+            const mins = Math.floor(total / 60);
+            const secs = total % 60;
+            return mins + ':' + String(secs).padStart(2, '0');
+        }
+
+        function glcShowTracks(data, message) {
+            const container = document.getElementById('searchResultsContainer');
+            glcQueue = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song.path; });
+            if (!glcQueue.length) {
+                container.innerHTML = '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
+                glcRenderNext();
+                glcMarkRow();
+                return;
+            }
+            container.innerHTML = glcQueue.map(function (song, index) {
+                const save = userId && song.song_id != null
+                    ? '<button type="button" class="glc-save" data-save="' + index + '" aria-label="Save ' + glcEsc(song.name) + '">Save</button>'
+                    : '';
+                return '<div class="glc-track" data-index="' + index + '">' +
+                    '<button type="button" class="glc-track-play" data-play="' + index + '" aria-label="Play ' + glcEsc(song.name) + '"><i class="fas fa-play" aria-hidden="true"></i></button>' +
+                    '<button type="button" class="glc-track-copy" data-play="' + index + '">' +
+                    '<span class="glc-track-name">' + glcEsc(song.name) + '</span>' +
+                    '<span class="glc-track-artist">' + glcEsc(song.artist) + '</span>' +
+                    '</button>' + save + '</div>';
+            }).join('');
+            if (glcCurrent) {
+                glcIndex = glcQueue.findIndex(function (song) { return song.path === glcCurrent.path; });
+            }
+            glcMarkRow();
+            glcRenderNext();
+        }
+
+        function glcMarkRow() {
+            document.querySelectorAll('.glc-track').forEach(function (row) {
+                const index = Number(row.getAttribute('data-index'));
+                const on = index === glcIndex;
+                const playing = on && !glcAudio.paused && !glcAudio.ended;
+                row.classList.toggle('is-playing', on && !glcAudio.ended);
+                const icon = row.querySelector('.glc-track-play i');
+                const btn = row.querySelector('.glc-track-play');
+                if (icon) icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+                if (btn && glcQueue[index]) {
+                    btn.setAttribute('aria-label', (playing ? 'Pause ' : 'Play ') + glcQueue[index].name);
+                }
+            });
+        }
+
+        function glcRenderNext() {
+            const list = document.getElementById('glcNextList');
+            const upcoming = glcIndex >= 0 ? glcQueue.slice(glcIndex + 1, glcIndex + 8) : glcQueue.slice(0, 7);
+            if (!list) return;
+            if (!upcoming.length) {
+                list.innerHTML = '<p class="glc-next-empty">Nothing after this song.</p>';
+                return;
+            }
+            const offset = glcIndex >= 0 ? glcIndex + 1 : 0;
+            list.innerHTML = upcoming.map(function (song, i) {
+                return '<button type="button" class="glc-next-item" data-play="' + (offset + i) + '">' +
+                    '<span>' + glcEsc(song.name) + '</span><small>' + glcEsc(song.artist) + '</small></button>';
+            }).join('');
+        }
+
+        function glcUpdateBar() {
+            const song = glcCurrent;
+            const title = document.getElementById('glcPlayerTitle');
+            const artist = document.getElementById('glcPlayerArtist');
+            const art = document.getElementById('glcPlayerArt');
+            const playBtn = document.getElementById('glcPlay');
+            if (!song) {
+                title.textContent = 'GLC Radio';
+                artist.textContent = 'Choose a song';
+                art.textContent = '♪';
+            } else {
+                title.textContent = song.name;
+                artist.textContent = song.artist;
+                art.textContent = (song.name || 'G').trim().charAt(0).toUpperCase();
+            }
+            const icon = playBtn.querySelector('i');
+            const playing = song && !glcAudio.paused && !glcAudio.ended;
+            icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+            playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+            glcMarkRow();
+            glcRenderNext();
+        }
+
+        function glcPlayIndex(index) {
+            if (index < 0 || index >= glcQueue.length) return;
+            const song = glcQueue[index];
+            if (glcIndex === index && glcAudio.src) {
+                if (glcAudio.paused) glcAudio.play();
+                else glcAudio.pause();
+                glcUpdateBar();
+                return;
+            }
+            glcIndex = index;
+            glcCurrent = song;
+            glcAudio.src = song.path;
+            glcAudio.play().catch(function () {});
+            glcUpdateBar();
+        }
+
+        function glcLoadCatalog() {
+            const container = document.getElementById('searchResultsContainer');
+            container.innerHTML = '<p class="glc-tracks-status">Loading songs…</p>';
+            fetch('/playlist2/get_available_songs')
+                .then(function (response) { return response.json(); })
+                .then(function (data) { glcShowTracks(data, 'No songs are available right now.'); })
+                .catch(function () { glcShowTracks([], 'Songs could not be loaded.'); });
+        }
+
+        document.getElementById('searchResultsContainer').addEventListener('click', function (event) {
+            const play = event.target.closest('[data-play]');
+            const save = event.target.closest('[data-save]');
+            if (play) glcPlayIndex(Number(play.getAttribute('data-play')));
+            if (save) {
+                const song = glcQueue[Number(save.getAttribute('data-save'))];
+                if (song) addSongToPlaylist(song.song_id, song.download_id, song.name, save);
+            }
+        });
+        document.getElementById('glcNextList').addEventListener('click', function (event) {
+            const play = event.target.closest('[data-play]');
+            if (play) glcPlayIndex(Number(play.getAttribute('data-play')));
+        });
+        document.getElementById('glcPlay').addEventListener('click', function () {
+            if (glcIndex < 0) glcPlayIndex(0);
+            else if (glcAudio.paused) glcAudio.play();
+            else glcAudio.pause();
+        });
+        document.getElementById('glcPrev').addEventListener('click', function () {
+            if (glcAudio.currentTime > 3) glcAudio.currentTime = 0;
+            else glcPlayIndex(glcIndex - 1);
+        });
+        document.getElementById('glcNext').addEventListener('click', function () { glcPlayIndex(glcIndex + 1); });
+        document.getElementById('glcVolume').addEventListener('input', function () { glcAudio.volume = Number(this.value); });
+        document.getElementById('glcNextToggle').addEventListener('click', function () {
+            const panel = document.getElementById('glcNextPanel');
+            const open = panel.hasAttribute('hidden');
+            if (open) panel.removeAttribute('hidden');
+            else panel.setAttribute('hidden', '');
+            this.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.getElementById('glcScrub').addEventListener('input', function () { glcScrubbing = true; });
+        document.getElementById('glcScrub').addEventListener('change', function () {
+            glcAudio.currentTime = Number(this.value);
+            glcScrubbing = false;
+        });
+        glcAudio.volume = 0.9;
+        glcAudio.addEventListener('play', glcUpdateBar);
+        glcAudio.addEventListener('pause', glcUpdateBar);
+        glcAudio.addEventListener('ended', function () {
+            if (glcIndex + 1 < glcQueue.length) glcPlayIndex(glcIndex + 1);
+            else glcUpdateBar();
+        });
+        glcAudio.addEventListener('timeupdate', function () {
+            if (glcScrubbing) return;
+            const scrub = document.getElementById('glcScrub');
+            scrub.max = glcAudio.duration || 0;
+            scrub.value = glcAudio.currentTime || 0;
+            document.getElementById('glcElapsed').textContent = glcClock(glcAudio.currentTime);
+            document.getElementById('glcDuration').textContent = glcClock(glcAudio.duration);
+        });
+
         // Playlist continuous playback state
         let playlistSongs = [];
         let currentPlayingIndex = -1;
@@ -537,36 +647,7 @@
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    if (Array.isArray(data) && data.length) {
-                        // Get artist profile picture from first song (if available)
-                        const artistProfilePic = data[0]?.artist_profile_pic;
-                        const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
-                        
-                        let html = `
-                            <div class="col-12 mb-3">
-                                <div class="alert alert-info d-flex align-items-center gap-3">
-                                    ${imageUrl ? `<img src="${imageUrl}" alt="${artistName}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
-                                    <div>
-                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistName}</strong></h6>
-                                        <small>Found ${data.length} song${data.length !== 1 ? 's' : ''} (including collaborations)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        data.forEach(song => {
-                            html += createSongCard(song, true);
-                        });
-                        
-                        resultsContainer.innerHTML = html;
-                    } else {
-                        resultsContainer.innerHTML = `
-                            <div class="col-12 text-center py-5">
-                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
-                                <p class="text-muted">No songs found for "${artistName}"</p>
-                            </div>
-                        `;
-                    }
+                    glcShowTracks(data, 'No songs found for ' + artistName);
                 })
                 .catch(error => {
                     console.error('Error fetching artist songs:', error);
@@ -683,17 +764,11 @@
             const resultsContainer = document.getElementById('searchResultsContainer');
 
             if (!query) {
-                resultsContainer.innerHTML = `
-                    <div class="col-12 text-center text-muted py-5">
-                        <i class="fas fa-search fa-3x mb-3 d-block"></i>
-                        <p>Search for an artist or song to get started</p>
-                        <small class="text-muted">Search GLC Radio originals by title or artist, for example Hyper-Hook Pop or GLC Radio</small>
-                    </div>
-                `;
+                glcLoadCatalog();
                 return;
             }
 
-            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Searching...</div>';
+            resultsContainer.innerHTML = '<p class="glc-tracks-status">Searching…</p>';
 
             fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
@@ -702,80 +777,18 @@
                         window.location.href = data.redirect;
                         return;
                     }
-
-                    if (Array.isArray(data) && data.length) {
-                        // Group songs by artist for better display
-                        const artistGroups = {};
-                        data.forEach(song => {
-                            const artist = song.artist || 'Unknown Artist';
-                            if (!artistGroups[artist]) {
-                                artistGroups[artist] = [];
-                            }
-                            artistGroups[artist].push(song);
-                        });
-                        
-                        let html = '';
-                        
-                        // If only one artist, show header with artist picture
-                        const artistNames = Object.keys(artistGroups);
-                        if (artistNames.length === 1) {
-                            // Get artist profile picture from first song (if available)
-                            const artistProfilePic = data[0]?.artist_profile_pic;
-                            const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
-                            
-                            html += `
-                                <div class="col-12 mb-3">
-                                    <div class="alert alert-info d-flex align-items-center gap-3">
-                                        ${imageUrl ? `<img src="${imageUrl}" alt="${artistNames[0]}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
-                                        <div>
-                                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistNames[0]}</strong></h6>
-                                            <small>Found ${data.length} song${data.length !== 1 ? 's' : ''}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        } else if (artistNames.length > 1) {
-                            html += `
-                                <div class="col-12 mb-3">
-                                    <div class="alert alert-success">
-                                        <h6 class="mb-0"><i class="fas fa-music me-2"></i>Found ${data.length} song${data.length !== 1 ? 's' : ''} from ${artistNames.length} artist${artistNames.length !== 1 ? 's' : ''}</h6>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // Display all songs with add to playlist buttons
-                        // If multiple artists, show artist picture with each song
-                        data.forEach(song => {
-                            html += createSongCard(song, true); // Always include actions (add to playlist)
-                        });
-                        
-                        resultsContainer.innerHTML = html;
-                    } else {
-                        resultsContainer.innerHTML = `
-                            <div class="col-12 text-center py-5">
-                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
-                                <p class="text-muted">No songs found for "${query}"</p>
-                                <small class="text-muted">Try GLC Radio, electro, afrobeats, or another original title</small>
-                            </div>
-                        `;
-                    }
+                    glcShowTracks(data, 'No songs found for ' + query);
                 })
                 .catch(error => {
                     console.error('Search error:', error);
-                    resultsContainer.innerHTML = `
-                        <div class="col-12">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-1"></i>Error searching songs. Please try again.
-                            </div>
-                        </div>
-                    `;
+                    glcShowTracks([], 'Search could not be completed. Try again.');
                 });
         }
 
 
         function loadPlaylist() {
             const container = document.getElementById('playlistContainer');
+            if (!container) return Promise.resolve();
             if (!userId) {
                 container.innerHTML = '<p class="text-muted text-center">Login to view your playlist.</p>';
                 return Promise.resolve();
@@ -1209,7 +1222,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadPlaylist();
+            glcLoadCatalog();
         });
     </script>
 
