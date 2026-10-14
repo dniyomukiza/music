@@ -8,8 +8,8 @@ from glconnect.eleven_catalog import (
     is_public_player_song,
     list_eleven_catalog,
     resolve_eleven_file,
-    search_eleven_catalog,
     suggest_eleven_catalog,
+    _matches_query,
 )
 import os
 
@@ -107,13 +107,46 @@ def _songs_for_artist_name(artist_name):
     return _merge_catalog(tracks, extra)
 
 
+def _all_public_tracks():
+    return _merge_catalog(
+        list_eleven_catalog(),
+        [_submission_payload(song) for song in _submission_rows("")],
+    )
+
+
+def _search_public(query):
+    """Title matches, plus every song by an artist whose name contains the query."""
+    q = (query or "").strip().lower()
+    tracks = _all_public_tracks()
+    if not q:
+        return []
+    artist_names = set()
+    if len(q) >= 2:
+        for track in tracks:
+            artist = (track.get("artist") or "").strip().lower()
+            if artist and q in artist:
+                artist_names.add(artist)
+    results = []
+    seen = set()
+    for track in tracks:
+        artist = (track.get("artist") or "").strip().lower()
+        if not (_matches_query(track, query) or artist in artist_names):
+            continue
+        key = track.get("song_id") or track.get("path") or track.get("filename")
+        if key in seen:
+            continue
+        seen.add(key)
+        results.append(track)
+    return results
+
+
 @play.route('/playlist2', methods=['GET'])
 def playlist2():
     """Search GLC Radio originals and approved artist submissions by title or artist."""
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])
-    return jsonify(_merge_catalog(search_eleven_catalog(query), [_submission_payload(song) for song in _submission_rows(query)]))
+    return jsonify(_search_public(query))
 
 
 @play.route('/suggestions', methods=['GET'])
