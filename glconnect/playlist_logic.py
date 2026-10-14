@@ -18,16 +18,16 @@ def add_to_playlist_impl(
     """
     from glconnect.models import Song, DownloadedSong, Playlist
 
-    from glconnect.eleven_catalog import is_eleven_song
+    from glconnect.eleven_catalog import is_public_player_song
 
     if song_id:
         song = session.query(Song).get(song_id)
         if not song:
             return False, "Song not found", 404
-        if not is_eleven_song(song):
-            return False, "Only GLC Radio originals can be added to the playlist.", 403
         if not song.is_approved():
             return False, "This song is not available for playlists yet.", 403
+        if not is_public_player_song(song):
+            return False, "This song is not available in the player.", 403
         existing = session.query(Playlist).filter_by(user_id=user_id, song_id=song_id).first()
         if existing:
             return True, f"Song is already in your playlist.", None

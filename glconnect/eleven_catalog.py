@@ -1,7 +1,8 @@
-"""Public music search is limited to ElevenLabs / GLC Radio originals.
+"""Public music search covers GLC Radio originals and approved artist submissions.
 
-Artist uploads (static/afro) and YouTube rips (static/ytauto) stay off the
-/mybook/music catalog so the player does not surface third-party recordings.
+GLC Radio files live under static/eleven. Artist tracks submitted for GLC Media
+live under static/afro or static/song_uploads and appear once an admin approves
+them. YouTube rips stay out of this player.
 """
 
 from __future__ import annotations
@@ -57,6 +58,26 @@ def is_eleven_path(path: Optional[str]) -> bool:
 
 def is_eleven_song(song: Any) -> bool:
     return is_eleven_path(getattr(song, "local_path", None))
+
+
+ARTIST_SUBMISSION_MARKERS = ("static/afro/", "static/song_uploads/")
+
+
+def is_artist_submission(song: Any) -> bool:
+    """True for an artist-uploaded file, not a GLC Radio original or a YouTube rip."""
+    path = (getattr(song, "local_path", None) or "").replace("\\", "/").lower()
+    if not path or is_eleven_path(path) or "ytauto" in path:
+        return False
+    return any(marker in path for marker in ARTIST_SUBMISSION_MARKERS)
+
+
+def is_public_player_song(song: Any) -> bool:
+    """Approved GLC Radio originals and approved artist submissions."""
+    if song is None:
+        return False
+    is_approved = getattr(song, "is_approved", None)
+    approved = bool(is_approved()) if callable(is_approved) else True
+    return approved and (is_eleven_song(song) or is_artist_submission(song))
 
 
 def parse_eleven_title(filename: str) -> tuple[str, str]:

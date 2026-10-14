@@ -7409,11 +7409,19 @@ body.ink-music-dashboard .glc-track-artist {
     font-size: 0.85rem;
 }
 body.ink-music-dashboard .glc-save {
-    border: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.22);
     background: transparent;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.8rem;
-    padding: 0.35rem 0.5rem;
+    color: #f4f1ea;
+    display: grid;
+    place-items: center;
+    padding: 0;
+}
+body.ink-music-dashboard .glc-save.is-saved {
+    color: var(--primary-color);
+    border-color: rgba(201, 162, 39, 0.6);
 }
 body.ink-music-dashboard .glc-player {
     position: fixed;
@@ -7543,6 +7551,28 @@ body.ink-music-dashboard .glc-next-empty {
     color: rgba(255, 255, 255, 0.55);
     font-size: 0.75rem;
     margin: 0 0 0.4rem;
+}
+body.ink-music-dashboard .glc-next-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+body.ink-music-dashboard .glc-next-row .glc-next-item {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+}
+body.ink-music-dashboard .glc-next-row.is-playing .glc-next-item span {
+    color: var(--primary-color);
+}
+body.ink-music-dashboard .glc-pl-remove {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    flex-shrink: 0;
 }
 body.ink-music-dashboard .glc-next-item {
     display: flex;

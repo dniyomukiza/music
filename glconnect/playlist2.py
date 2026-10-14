@@ -3,7 +3,9 @@ from flask_login import current_user, login_required
 from glconnect.models import Song, Playlist, db, Artist, Song_upload, DownloadedSong
 from glconnect.eleven_catalog import (
     eleven_songs_for_artist,
+    is_artist_submission,
     is_eleven_song,
+    is_public_player_song,
     list_eleven_catalog,
     resolve_eleven_file,
     search_eleven_catalog,
@@ -26,34 +28,133 @@ def check_song_file_exists(song):
     return _get_song_file_path(song) is not None
 
 def get_all_songs_by_artist(artist_id=None, artist_name=None, include_collaborations=False):
-    """Return ElevenLabs / GLC Radio tracks only. Other folders are excluded from search."""
+    """GLC Radio tracks plus approved artist submissions."""
     if artist_name:
-        return eleven_songs_for_artist(artist_name)
+        return _songs_for_artist_name(artist_name)
+    if artist_id:
+        artist = Artist.query.get(artist_id)
+        if artist and artist.artist_name:
+            return _songs_for_artist_name(artist.artist_name)
     return list_eleven_catalog()
+
+
+def _submission_rows(query=""):
+    q = (query or "").strip()
+    filters = [
+        _approved_songs_filter(),
+        db.or_(
+            Song.local_path.ilike("%static/afro/%"),
+            Song.local_path.ilike("%static/song_uploads/%"),
+        ),
+    ]
+    stmt = Song.query.filter(*filters)
+    if q:
+        like = f"%{q}%"
+        words = [word for word in q.split() if len(word) > 1]
+        if len(words) > 1:
+            word_filters = []
+            for word in words:
+                word_like = f"%{word}%"
+                word_filters.append(db.or_(Song.name.ilike(word_like), Song.artist.ilike(word_like)))
+            stmt = stmt.filter(db.and_(*word_filters))
+        else:
+            stmt = stmt.filter(db.or_(Song.name.ilike(like), Song.artist.ilike(like)))
+    return [song for song in stmt.all() if is_artist_submission(song)]
+
+
+def _submission_payload(song):
+    cover = (song.cover_image or "").strip()
+    cover_url = None
+    if cover and cover != "photo3.webp" and not cover.startswith(("/", "http")):
+        cover_url = f"/static/images/{cover}"
+    elif cover.startswith(("/", "http")):
+        cover_url = cover
+    return {
+        "id": song.id,
+        "song_id": song.id,
+        "download_id": None,
+        "name": song.name or "Untitled Track",
+        "artist": song.artist or "Unknown Artist",
+        "path": url_for("playlist2.serve_song_file", song_id=song.id),
+        "cover_image": cover_url,
+        "artist_profile_pic": None,
+        "filename": os.path.basename(song.local_path or ""),
+        "artist_id": song.artist_id,
+    }
+
+
+def _merge_catalog(eleven_tracks, submissions):
+    merged = list(eleven_tracks)
+    seen = {track.get("song_id") for track in merged if track.get("song_id") is not None}
+    for track in submissions:
+        if track.get("song_id") in seen:
+            continue
+        seen.add(track.get("song_id"))
+        merged.append(track)
+    return merged
+
+
+def _songs_for_artist_name(artist_name):
+    name = (artist_name or "").strip().lower()
+    if not name:
+        return []
+    tracks = eleven_songs_for_artist(artist_name)
+    extra = [
+        _submission_payload(song)
+        for song in _submission_rows("")
+        if name == (song.artist or "").strip().lower() or name in (song.artist or "").strip().lower()
+    ]
+    return _merge_catalog(tracks, extra)
 
 
 @play.route('/playlist2', methods=['GET'])
 def playlist2():
-    """Search only ElevenLabs / GLC Radio originals under static/eleven."""
+    """Search GLC Radio originals and approved artist submissions by title or artist."""
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])
-    return jsonify(search_eleven_catalog(query))
+    return jsonify(_merge_catalog(search_eleven_catalog(query), [_submission_payload(song) for song in _submission_rows(query)]))
 
 
 @play.route('/suggestions', methods=['GET'])
 def get_suggestions():
-    """Autocomplete from the ElevenLabs catalog only."""
+    """Autocomplete across GLC Radio originals and approved artist submissions."""
     query = request.args.get('q', '').strip()
     if not query or len(query) < 2:
         return jsonify({'artists': [], 'songs': []})
-    return jsonify(suggest_eleven_catalog(query))
+    data = suggest_eleven_catalog(query)
+    artists = list(data.get("artists") or [])
+    songs = list(data.get("songs") or [])
+    seen_artists = {(item.get("name") or "").strip().lower() for item in artists}
+    seen_songs = {item.get("song_id") for item in songs if item.get("song_id") is not None}
+    for song in _submission_rows(query):
+        payload = _submission_payload(song)
+        artist = (payload.get("artist") or "").strip()
+        key = artist.lower()
+        if artist and key not in seen_artists and len(artists) < 8:
+            seen_artists.add(key)
+            artists.append({"id": payload.get("artist_id"), "name": artist, "type": "artist"})
+        if payload.get("song_id") not in seen_songs and len(songs) < 8:
+            seen_songs.add(payload.get("song_id"))
+            songs.append({
+                "id": payload["id"],
+                "song_id": payload["song_id"],
+                "download_id": None,
+                "name": payload["name"],
+                "artist": artist,
+                "type": "song",
+            })
+    return jsonify({"artists": artists, "songs": songs})
 
 
 @play.route('/artist-songs', methods=['GET'])
 def get_artist_songs():
     artist_name = request.args.get('artist_name', '').strip()
-    return jsonify(eleven_songs_for_artist(artist_name))
+    artist_id = request.args.get('artist_id', type=int)
+    if artist_id and not artist_name:
+        artist = Artist.query.get(artist_id)
+        artist_name = artist.artist_name if artist else ""
+    return jsonify(_songs_for_artist_name(artist_name))
 
 
 @play.route('/get_available_songs', methods=['GET'])
@@ -109,7 +210,7 @@ def get_user_playlist():
             continue
         if entry.song_id:
             song = Song.query.get(entry.song_id)
-            if not song or not is_eleven_song(song):
+            if not is_public_player_song(song):
                 continue
             # Get artist name - prefer artist field, fallback to artist_id lookup
             artist_name = song.artist if song.artist else 'Unknown'
@@ -266,8 +367,8 @@ def serve_song_file(song_id):
     """Serve song file by ID (Song table / artist uploads)."""
     try:
         song = Song.query.get_or_404(song_id)
-        if not is_eleven_song(song):
-            return jsonify({"error": "Only GLC Radio originals are available in the player"}), 404
+        if not is_public_player_song(song):
+            return jsonify({"error": "This song is not available in the player"}), 404
         file_path = _get_song_file_path(song)
 
         if file_path:

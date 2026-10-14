@@ -76,7 +76,7 @@
                 <form class="glc-search autocomplete-container" onsubmit="event.preventDefault(); searchMusic();">
                     <label for="musicSearchInput" class="visually-hidden">Search artists or tracks</label>
                     <i class="fas fa-search" aria-hidden="true"></i>
-                    <input type="search" id="musicSearchInput" placeholder="Search songs" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                    <input type="search" id="musicSearchInput" placeholder="Search songs or artists" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
                 </form>
                 {% if has_artist_profile and is_artist_account %}
                 <button type="button" class="glc-release" data-bs-toggle="modal" data-bs-target="#uploadSongModal">Release a track</button>
@@ -87,7 +87,7 @@
             <div id="autocompleteSuggestions" class="autocomplete-suggestions" role="listbox" aria-label="Search suggestions"></div>
             <div id="inkMusicResultsCol">
                 <div id="searchResultsContainer" class="glc-tracks" aria-live="polite">
-                    <p class="glc-tracks-status">Loading songs…</p>
+                    <p class="glc-tracks-status">Search for a song or an artist.</p>
                 </div>
             </div>
         </div>
@@ -114,11 +114,11 @@
                 <i class="fas fa-volume-up" aria-hidden="true"></i>
                 <input type="range" id="glcVolume" min="0" max="1" step="0.01" value="0.9" aria-label="Volume">
             </label>
-            <button type="button" class="glc-next-toggle" id="glcNextToggle" aria-expanded="false" aria-controls="glcNextPanel">Up next</button>
+            <button type="button" class="glc-next-toggle" id="glcNextToggle" aria-expanded="false" aria-controls="glcNextPanel">Playlist</button>
         </div>
     </section>
     <div class="glc-next-panel" id="glcNextPanel" hidden>
-        <p class="glc-next-label">Up next</p>
+        <p class="glc-next-label">Playlist</p>
         <div id="glcNextList"></div>
     </div>
 
@@ -128,9 +128,13 @@
         const glcAudio = new Audio();
         glcAudio.preload = 'none';
         let glcQueue = [];
+        let glcResults = [];
+        let glcPlaylist = [];
+        let glcSource = 'results';
         let glcIndex = -1;
         let glcCurrent = null;
         let glcScrubbing = false;
+        let glcSavedIds = new Set();
 
         function glcEsc(value) {
             return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
@@ -167,59 +171,76 @@
 
         function glcShowTracks(data, message) {
             const container = document.getElementById('searchResultsContainer');
-            glcQueue = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song.path; });
-            if (!glcQueue.length) {
+            glcResults = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song.path; });
+            if (!glcResults.length) {
                 container.innerHTML = '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
-                glcRenderNext();
                 glcMarkRow();
+                glcRenderPlaylist();
                 return;
             }
-            container.innerHTML = glcQueue.map(function (song, index) {
-                const save = userId && song.song_id != null
-                    ? '<button type="button" class="glc-save" data-save="' + index + '" aria-label="Save ' + glcEsc(song.name) + '">Save</button>'
+            container.innerHTML = glcResults.map(function (song, index) {
+                const saved = song.song_id != null && glcSavedIds.has(Number(song.song_id));
+                const playlist = song.song_id != null
+                    ? '<button type="button" class="glc-save' + (saved ? ' is-saved' : '') + '" data-playlist="' + index + '" aria-label="' + glcEsc((saved ? 'Remove ' : 'Add ') + song.name + (saved ? ' from playlist' : ' to playlist')) + '"><i class="fas fa-' + (saved ? 'minus' : 'plus') + '" aria-hidden="true"></i></button>'
                     : '';
                 return '<div class="glc-track" data-index="' + index + '">' +
                     '<button type="button" class="glc-track-play" data-play="' + index + '" aria-label="Play ' + glcEsc(song.name) + '"><i class="fas fa-play" aria-hidden="true"></i></button>' +
                     '<button type="button" class="glc-track-copy" data-play="' + index + '">' +
                     '<span class="glc-track-name">' + glcEsc(song.name) + '</span>' +
                     '<span class="glc-track-artist">' + glcEsc(song.artist) + '</span>' +
-                    '</button>' + save + '</div>';
+                    '</button>' + playlist + '</div>';
             }).join('');
-            if (glcCurrent) {
-                glcIndex = glcQueue.findIndex(function (song) { return song.path === glcCurrent.path; });
-            }
             glcMarkRow();
-            glcRenderNext();
+            glcRenderPlaylist();
         }
 
         function glcMarkRow() {
             document.querySelectorAll('.glc-track').forEach(function (row) {
                 const index = Number(row.getAttribute('data-index'));
-                const on = index === glcIndex;
+                const song = glcResults[index];
+                const on = !!(song && glcCurrent && song.path === glcCurrent.path && glcSource === 'results');
                 const playing = on && !glcAudio.paused && !glcAudio.ended;
                 row.classList.toggle('is-playing', on && !glcAudio.ended);
                 const icon = row.querySelector('.glc-track-play i');
                 const btn = row.querySelector('.glc-track-play');
                 if (icon) icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
-                if (btn && glcQueue[index]) {
-                    btn.setAttribute('aria-label', (playing ? 'Pause ' : 'Play ') + glcQueue[index].name);
-                }
+                if (btn && song) btn.setAttribute('aria-label', (playing ? 'Pause ' : 'Play ') + song.name);
             });
         }
 
-        function glcRenderNext() {
+        function glcRevealPlaylist() {
+            const panel = document.getElementById('glcNextPanel');
+            const toggle = document.getElementById('glcNextToggle');
+            if (panel) panel.removeAttribute('hidden');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        }
+
+        function glcRenderPlaylist() {
             const list = document.getElementById('glcNextList');
-            const upcoming = glcIndex >= 0 ? glcQueue.slice(glcIndex + 1, glcIndex + 8) : glcQueue.slice(0, 7);
             if (!list) return;
-            if (!upcoming.length) {
-                list.innerHTML = '<p class="glc-next-empty">Nothing after this song.</p>';
+            if (!userId) {
+                list.innerHTML = '<p class="glc-next-empty">Log in to keep a playlist.</p>';
                 return;
             }
-            const offset = glcIndex >= 0 ? glcIndex + 1 : 0;
-            list.innerHTML = upcoming.map(function (song, i) {
-                return '<button type="button" class="glc-next-item" data-play="' + (offset + i) + '">' +
-                    '<span>' + glcEsc(song.name) + '</span><small>' + glcEsc(song.artist) + '</small></button>';
+            if (!glcPlaylist.length) {
+                list.innerHTML = '<p class="glc-next-empty">Nothing saved yet.</p>';
+                return;
+            }
+            list.innerHTML = glcPlaylist.map(function (song, index) {
+                const on = glcSource === 'playlist' && glcCurrent && song.path === glcCurrent.path;
+                return '<div class="glc-next-row' + (on ? ' is-playing' : '') + '">' +
+                    '<button type="button" class="glc-next-item" data-play-saved="' + index + '">' +
+                    '<span>' + glcEsc(song.name) + '</span><small>' + glcEsc(song.artist) + '</small></button>' +
+                    '<button type="button" class="glc-pl-remove" data-remove-saved="' + index + '" aria-label="' + glcEsc('Remove ' + song.name + ' from playlist') + '"><i class="fas fa-minus" aria-hidden="true"></i></button>' +
+                    '</div>';
             }).join('');
+        }
+
+        function glcSyncPlaylistQueue() {
+            if (glcSource !== 'playlist') return;
+            const path = glcCurrent && glcCurrent.path;
+            glcQueue = glcPlaylist.slice();
+            glcIndex = glcQueue.findIndex(function (song) { return song.path === path; });
         }
 
         function glcUpdateBar() {
@@ -242,13 +263,29 @@
             icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
             playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             glcMarkRow();
-            glcRenderNext();
+            glcRenderPlaylist();
         }
 
-        function glcPlayIndex(index) {
+        function glcPlayList(list, index, source) {
+            const song = list[index];
+            if (!song) return;
+            if (glcCurrent && glcCurrent.path === song.path && glcSource === source && glcAudio.src) {
+                glcQueue = list.slice();
+                glcIndex = index;
+                if (glcAudio.paused) glcAudio.play();
+                else glcAudio.pause();
+                glcUpdateBar();
+                return;
+            }
+            glcSource = source;
+            glcQueue = list.slice();
+            glcPlayIndex(index, true);
+        }
+
+        function glcPlayIndex(index, force) {
             if (index < 0 || index >= glcQueue.length) return;
             const song = glcQueue[index];
-            if (glcIndex === index && glcAudio.src) {
+            if (!force && glcCurrent && glcCurrent.path === song.path && glcAudio.src) {
                 if (glcAudio.paused) glcAudio.play();
                 else glcAudio.pause();
                 glcUpdateBar();
@@ -261,30 +298,89 @@
             glcUpdateBar();
         }
 
-        function glcLoadCatalog() {
-            const container = document.getElementById('searchResultsContainer');
-            container.innerHTML = '<p class="glc-tracks-status">Loading songs…</p>';
-            fetch('/playlist2/get_available_songs')
+        function glcLoadSaved() {
+            glcRenderPlaylist();
+            if (!userId) return;
+            fetch('/playlist2/view_playlist')
                 .then(function (response) { return response.json(); })
-                .then(function (data) { glcShowTracks(data, 'No songs are available right now.'); })
-                .catch(function () { glcShowTracks([], 'Songs could not be loaded.'); });
+                .then(function (data) {
+                    glcPlaylist = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song.path; });
+                    glcSavedIds = new Set(glcPlaylist.map(function (song) { return Number(song.song_id); }).filter(function (id) { return id; }));
+                    if (glcPlaylist.length) glcRevealPlaylist();
+                    if (glcResults.length) glcShowTracks(glcResults);
+                    else glcRenderPlaylist();
+                })
+                .catch(function () {});
+        }
+
+        function glcApplyPlaylistChange(song, saved) {
+            const songId = Number(song.song_id);
+            if (saved) {
+                glcSavedIds.delete(songId);
+                glcPlaylist = glcPlaylist.filter(function (item) { return Number(item.song_id) !== songId; });
+            } else if (!glcSavedIds.has(songId)) {
+                glcSavedIds.add(songId);
+                glcPlaylist.push(song);
+                glcRevealPlaylist();
+            }
+            glcSyncPlaylistQueue();
+            if (glcResults.length) glcShowTracks(glcResults);
+            else glcRenderPlaylist();
+            glcUpdateBar();
+        }
+
+        function glcTogglePlaylistSong(song, button) {
+            if (!song || song.song_id == null) return;
+            if (!userId) {
+                alert('Please log in to manage your playlist.');
+                return;
+            }
+            const songId = Number(song.song_id);
+            const saved = glcSavedIds.has(songId);
+            if (button) button.disabled = true;
+            fetch(saved ? '/playlist2/remove_song' : '/playlist2/add_to_playlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(saved ? { song_id: songId } : { user_id: userId, song_id: songId })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data.status === 'success') {
+                    glcApplyPlaylistChange(song, saved);
+                } else {
+                    alert(data.message || 'Could not update your playlist.');
+                    if (button) button.disabled = false;
+                }
+            })
+            .catch(function () {
+                alert('Could not update your playlist.');
+                if (button) button.disabled = false;
+            });
+        }
+
+        function glcTogglePlaylist(index, button) {
+            glcTogglePlaylistSong(glcResults[index], button);
         }
 
         document.getElementById('searchResultsContainer').addEventListener('click', function (event) {
             const play = event.target.closest('[data-play]');
-            const save = event.target.closest('[data-save]');
-            if (play) glcPlayIndex(Number(play.getAttribute('data-play')));
-            if (save) {
-                const song = glcQueue[Number(save.getAttribute('data-save'))];
-                if (song) addSongToPlaylist(song.song_id, song.download_id, song.name, save);
-            }
+            const playlist = event.target.closest('[data-playlist]');
+            if (playlist) glcTogglePlaylist(Number(playlist.getAttribute('data-playlist')), playlist);
+            else if (play) glcPlayList(glcResults, Number(play.getAttribute('data-play')), 'results');
         });
         document.getElementById('glcNextList').addEventListener('click', function (event) {
-            const play = event.target.closest('[data-play]');
-            if (play) glcPlayIndex(Number(play.getAttribute('data-play')));
+            const play = event.target.closest('[data-play-saved]');
+            const remove = event.target.closest('[data-remove-saved]');
+            if (remove) {
+                const index = Number(remove.getAttribute('data-remove-saved'));
+                const song = glcPlaylist[index];
+                if (song) glcTogglePlaylistSong(song, remove);
+            } else if (play) {
+                glcPlayList(glcPlaylist, Number(play.getAttribute('data-play-saved')), 'playlist');
+            }
         });
         document.getElementById('glcPlay').addEventListener('click', function () {
-            if (glcIndex < 0) glcPlayIndex(0);
+            if (!glcCurrent && glcPlaylist.length) glcPlayList(glcPlaylist, 0, 'playlist');
             else if (glcAudio.paused) glcAudio.play();
             else glcAudio.pause();
         });
@@ -764,7 +860,7 @@
             const resultsContainer = document.getElementById('searchResultsContainer');
 
             if (!query) {
-                glcLoadCatalog();
+                resultsContainer.innerHTML = '<p class="glc-tracks-status">Search for a song or an artist.</p>';
                 return;
             }
 
@@ -1222,7 +1318,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            glcLoadCatalog();
+            glcLoadSaved();
         });
     </script>
 
