@@ -529,9 +529,6 @@
         <div class="container-fluid">
             <a class="ab-brand" href="{{ url_for('book_platform.dashboard') }}"><i class="fas fa-pen-fancy me-2" aria-hidden="true"></i>Ink Studio</a>
             <div class="ab-nav-actions">
-                <a class="btn btn-ab-ghost btn-sm" href="{{ audio_download_url }}" title="MP3 or ZIP of chapters">
-                    <i class="fas fa-download me-1" aria-hidden="true"></i>Download
-                </a>
                 <a class="btn btn-ab-ghost btn-sm" href="{{ url_for('book_platform.my_library') }}">
                     <i class="fas fa-book-reader me-1" aria-hidden="true"></i>My library
                 </a>
@@ -653,8 +650,8 @@
         {% endif %}
 
         <div class="ab-footer-actions">
-            <a href="{{ audio_download_url }}" class="btn btn-ab-ghost">
-                <i class="fas fa-download me-2" aria-hidden="true"></i>Download audio
+            <a href="{{ audio_download_url }}" class="btn btn-ab-ghost" aria-label="Download audiobook">
+                <i class="fas fa-download me-2" aria-hidden="true"></i>Download audiobook
             </a>
             <p class="small mt-2 mb-0" style="color: var(--ab-muted);">One MP3 when available, otherwise a ZIP of chapter files.</p>
         </div>

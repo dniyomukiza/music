@@ -216,12 +216,23 @@ done
 ELAPSED=$(( $(date +%s) - DEPLOY_START ))
 echo "Deploy finished in ${ELAPSED}s ($(( ELAPSED / 60 ))m $(( ELAPSED % 60 ))s). Mode: $([ "$FAST_DEPLOY" = 1 ] && echo FAST || echo BUILD:${BUILD_SERVICES[*]})."
 
-# Mark last known good only when core health checks pass (rollback target stays reliable).
+# Record last green commit for Patch if it later resets enhancements to that SHA.
 APP_OK=0
 curl -sf --max-time 8 http://localhost:5000/health >/dev/null && APP_OK=1
 if [ "$APP_OK" = 1 ]; then
   git rev-parse HEAD > "$LAST_GOOD_COMMIT_FILE"
   echo "Recorded last known good commit: $(cat "$LAST_GOOD_COMMIT_FILE")"
 else
-  echo "--- Warning: app /health not OK; last_good_commit not updated (rollback unchanged) ---"
+  echo "--- app /health not OK; last_good_commit not updated ---"
+  echo "PATCH_BOT: This deploy job failed. Diagnose from this Actions log. Do not use live Compose logs."
+fi
+
+echo "--- myapp container status ---"
+"${COMPOSE[@]}" ps app 2>/dev/null || docker ps -a --filter name=myapp --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' || true
+
+echo "--- myapp logs (last 200 lines) ---"
+docker logs myapp --tail 200 2>&1 || "${COMPOSE[@]}" logs app --tail 200 2>&1 || true
+
+if [ "$APP_OK" != 1 ]; then
+  exit 1
 fi

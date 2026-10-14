@@ -44,7 +44,7 @@
                         <i class="fas fa-check-circle fa-2x me-3"></i>
                         <div class="flex-grow-1">
                             <h5 class="alert-heading mb-1"><i class="fas fa-headphones me-2"></i>Audiobook ready</h5>
-                            <p class="mb-0">Preview below, then publish when you are satisfied.</p>
+                            <p class="mb-0">Preview every section below (or open the full player), then publish when you are satisfied.</p>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -60,7 +60,6 @@
                     <input type="hidden" name="price" value="{{ book.price if book.price is not none else '0' }}">
                     <input type="hidden" name="tags" value="{{ book.tags or '' }}">
                     <input type="hidden" name="target_audience" value="{{ book.target_audience or '' }}">
-                    <input type="hidden" name="word_count_target" value="{{ book.word_count_target or '' }}">
                     <input type="hidden" name="audiobook_price" id="audiobook_price_field" value="{{ book.audiobook_price if book.audiobook_price is not none else '' }}">
                     {% if book.digital_file_path %}
                     <input type="hidden" name="publish_digital_book" id="publish_digital_book" value="on" data-was-published="1">
@@ -71,6 +70,11 @@
                     <input type="hidden" name="listing_coupon_id" id="listing_coupon_id_field" value="">
                     {% else %}
                     <input type="hidden" name="is_published" id="is_published" value="{% if book.status.value == 'published' %}on{% endif %}" data-was-published="{% if book.status.value == 'published' %}1{% else %}0{% endif %}">
+                    <input type="hidden" name="publish_audiobook" id="publish_audiobook" value="{% if book.audiobook_published %}on{% endif %}" data-was-published="{% if book.audiobook_published %}1{% else %}0{% endif %}">
+                    <input type="hidden" name="confirm_audiobook_publish" id="confirm_audiobook_publish_field" value="">
+                    <input type="hidden" name="listing_terms_rights_warranty" id="listing_terms_rights_warranty_field" value="">
+                    <input type="hidden" name="listing_terms_takedown_consent" id="listing_terms_takedown_consent_field" value="">
+                    <input type="hidden" name="listing_coupon_id" id="listing_coupon_id_field" value="">
                     {% endif %}
                 </form>
 
@@ -124,18 +128,20 @@
                                     </p>
                                     
                                     <!-- Embedded Audio Player -->
-                                    <div class="mb-3">
-                                        <label class="form-label"><i class="fas fa-headphones me-2"></i>Preview Audiobook:</label>
-                                        <audio controls class="w-100" style="max-width: 100%;">
-                                            <source src="{{ url_for('book_platform.serve_audiobook_file', book_id=book.id) }}" type="audio/mpeg">
-                                            Your browser does not support the audio element.
-                                        </audio>
-                                    </div>
+                                    {% include 'book_platform/includes/_audiobook_author_preview.html' %}
                                 </div>
-                                <div class="col-md-4 text-end">
-                                    <button class="btn btn-outline-danger btn-sm" onclick="regenerateAudiobook()">
-                                        <i class="fas fa-redo"></i> Regenerate
-                                    </button>
+                                <div class="col-md-4">
+                                    <div class="d-flex flex-column gap-2">
+                                        {% if book.audiobook_published %}
+                                        <span class="badge bg-success align-self-md-end py-2 px-3">
+                                            <i class="fas fa-check me-1"></i>Audiobook live on marketplace
+                                        </span>
+                                        {% endif %}
+                                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="startAudiobookRegeneration()">
+                                            <i class="fas fa-redo me-1"></i>Regenerate
+                                        </button>
+                                        <small class="text-muted">Regenerate clears this audio and returns you to section and voice selection.</small>
+                                    </div>
                                 </div>
                             </div>
                         {% else %}
@@ -157,25 +163,40 @@
                                         <strong>Voice language:</strong> choose a voice matching <strong>{{ ebook_language_label }}</strong>.
                                     </div>
                                     <p class="text-muted mb-3">
-                                        <strong>Step 1:</strong> Review sections. <strong>Content chapters</strong> define narration start/stop (each becomes its own audio track).
-                                        Foreword, afterword, and appendix are labeled separately, usually optional in audio.
-                                        <strong>Step 2:</strong> Choose a voice, then generate.
+                                        <strong>Step 1:</strong> Choose which parts are read aloud (required before generating).
+                                        <strong>Step 2:</strong> Set a price, choose a voice, then generate.
                                     </p>
-                                    <div class="mb-3">
-                                        <button type="button" class="btn btn-outline-primary" id="btnPrepareAudiobookSegments" onclick="prepareAudiobookSegments()">
-                                            <i class="fas fa-list-check me-1"></i> Review sections for audiobook
+                                    <div class="ink-audiobook-step ink-audiobook-step--review mb-4" id="audiobookReviewStepCta" role="region" aria-labelledby="audiobookReviewStepHeading">
+                                        <div class="ink-audiobook-step__header">
+                                            <span class="ink-audiobook-step__badge">Step 1</span>
+                                            <span class="ink-audiobook-step__required">Required</span>
+                                        </div>
+                                        <h6 class="ink-audiobook-step__title" id="audiobookReviewStepHeading">Review sections for audiobook</h6>
+                                        <p class="ink-audiobook-step__desc small mb-3">
+                                            <strong>Content chapters</strong> define narration start/stop (each becomes its own audio track).
+                                            Foreword, afterword, and appendix are labeled separately, usually optional in audio.
+                                            <span class="d-block mt-1">Nothing is selected automatically — check each section you want narrated.</span>
+                                        </p>
+                                        <button type="button" class="btn ink-audiobook-review-btn ink-audiobook-review-btn--compact" id="btnPrepareAudiobookSegments" onclick="prepareAudiobookSegments()">
+                                            <i class="fas fa-list-check me-2" aria-hidden="true"></i>
+                                            Review sections for audiobook
+                                            <i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>
                                         </button>
-                                        <span id="audiobookPrepareStatus" class="small text-muted ms-2" role="status"></span>
+                                        <p id="audiobookPrepareStatus" class="ink-audiobook-step__status small mb-0 mt-2" role="status"></p>
                                     </div>
                                     <div id="audiobookSegmentsPanel" class="mb-3 d-none">
                                         <div class="alert alert-secondary py-2 px-3 small mb-2">
-                                            <strong>Content chapters vs. other sections.</strong>
-                                            Checked <strong>content chapters</strong> are the narrative boundaries (start/stop tracks).
-                                            Front matter (foreword) and back matter (appendix) are optional, uncheck if they should not be spoken.
-                                            Your ebook file for sale is unchanged.
+                                            <strong>Choose what to narrate.</strong>
+                                            Check each section you want in the audiobook. In-progress manuscript sections are included here too.
+                                            Your ebook listing is unchanged.
                                             <span id="audiobookClassifierBadge" class="badge bg-light text-dark border ms-2 d-none"></span>
                                         </div>
-                                        <div id="audiobookSegmentsList" class="border rounded p-2 bg-light" style="max-height: 320px; overflow-y: auto;"></div>
+                                        <div class="d-flex flex-wrap gap-2 mb-2" id="audiobookSegmentsToolbar">
+                                            <button type="button" class="btn btn-sm btn-outline-light" id="btnAudiobookUseSuggestions">Use AI suggestions</button>
+                                            <button type="button" class="btn btn-sm btn-outline-light" id="btnAudiobookSelectChapters">Select all chapters</button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAudiobookClearSelection">Clear all</button>
+                                        </div>
+                                        <div id="audiobookSegmentsList" class="border rounded p-2 bg-light ink-audiobook-segments-list" style="max-height: 420px; overflow-y: auto;"></div>
                                     </div>
                                     
                                     <div class="mb-3">
@@ -245,31 +266,41 @@
                                             
                                             <!-- Preview Audio Player -->
                                             <div id="previewPlayerContainer" class="mt-3" style="display: none;">
-                                                <label class="form-label small">Preview Audio:</label>
+                                                <label class="form-label small">Preview from your book:</label>
                                                 <audio id="previewAudioPlayer" controls class="w-100" style="max-width: 500px;">
                                                     Your browser does not support the audio element.
                                                 </audio>
                                             </div>
+                                            <p class="small text-muted mt-2 mb-0"><i class="fas fa-book-open me-1" aria-hidden="true"></i>Voice previews use the opening of your book, so you can hear names, tone, and pacing before generating.</p>
                                         </div>
                                         
                                         <!-- Error Message -->
                                         <div id="voiceError" class="alert alert-danger mt-2" style="display: none;"></div>
                                     </div>
                                     
-                                    <!-- Generate Button - Appears after voice selection -->
+                                    <!-- Generate Button - enabled only when price, sections, and voice are set -->
                                     <div class="mt-4 text-center">
-                                        <button class="btn btn-primary btn-lg" onclick="generateAudiobook()" id="generateBtn">
-                                            <i class="fas fa-headphones"></i> Generate Audiobook
+                                        <button class="btn btn-primary ink-audiobook-generate-btn" onclick="generateAudiobook()" id="generateBtn" disabled aria-disabled="true">
+                                            <i class="fas fa-headphones me-2" aria-hidden="true"></i>Generate
                                         </button>
+                                        <p id="audiobookGenerateHint" class="small text-muted mt-2 mb-0">
+                                            Before generating: review sections and select at least one part, set a price (0 for free), choose a voice.
+                                        </p>
                                     </div>
                             </div>
 
                         {% endif %}
                     </div>
                 </div>
-                {% if book.digital_file_path %}
+                {% if book.has_audiobook %}
                 <div class="card border-primary mt-3" id="audiobook-publish-actions">
                     <div class="card-body">
+                        {% if book.audiobook_published %}
+                        <div class="alert alert-success mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Audiobook is live</strong> on the marketplace. Use <strong>Regenerate</strong> above to replace the audio, then publish again.
+                        </div>
+                        {% else %}
                         <ol class="small text-muted mb-3 ps-3 mb-0" id="listingPublishSteps">
                             {% if book_has_listing_attestation(book) %}
                             <li id="listingStepPreview" class="mb-1"><strong>Step 1:</strong> Preview the audiobook and check the approval box.</li>
@@ -355,7 +386,8 @@
                                 <i class="fas fa-columns me-1"></i>Skip audiobook for now
                             </a>
                         </div>
-                        <small class="text-muted d-block mt-2">Ebook is already published from step 1.</small>
+                        <small class="text-muted d-block mt-2">Your ebook is already on the marketplace. Publish the audiobook when you are satisfied with the preview.</small>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -370,6 +402,13 @@
         let listingTermsConfirmed = {{ book_has_listing_attestation(book)|tojson }};
         const listingAttestationComplete = {{ book_has_listing_attestation(book)|tojson }};
         let audiobookReadyForPublish = {{ 'true' if book.has_audiobook else 'false' }};
+        const audiobookWasReadyOnLoad = audiobookReadyForPublish;
+        const audiobookStudioUrl = '{{ url_for("book_platform.book_audiobook", book_id=book.id) }}';
+
+        function redirectToAudiobookStudioWhenReady() {
+            const target = audiobookStudioUrl + (audiobookStudioUrl.indexOf('?') >= 0 ? '&' : '?') + 'ready=1';
+            window.location.assign(target);
+        }
 
         function syncAudiobookPriceToForm() {
             const priceEl = document.getElementById('audiobookPricePostGen') || document.getElementById('audiobookPrice');
@@ -405,6 +444,83 @@
                 return { ok: false, error: 'Audiobook price must be 0 or higher.' };
             }
             return { ok: true, value: val };
+        }
+
+        function audiobookHasValidPrice() {
+            return readAudiobookPriceForGeneration().ok;
+        }
+
+        function audiobookHasIncludedSections() {
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.sourceHash) {
+                return false;
+            }
+            const segments = window._audiobookSegmentState.segments || [];
+            if (!segments.length) {
+                return false;
+            }
+            for (let i = 0; i < segments.length; i++) {
+                const cb = document.getElementById('audiobook-seg-' + i);
+                if (cb && cb.checked) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function audiobookHasSelectedVoice() {
+            const voiceInput = document.getElementById('audiobookVoice');
+            return !!(voiceInput && (voiceInput.value || '').trim());
+        }
+
+        function updateAudiobookReviewCta() {
+            const cta = document.getElementById('audiobookReviewStepCta');
+            const btn = document.getElementById('btnPrepareAudiobookSegments');
+            if (!cta || !btn) {
+                return;
+            }
+            const reviewed = audiobookHasIncludedSections();
+            cta.classList.toggle('ink-audiobook-step--complete', reviewed);
+            btn.setAttribute('aria-pressed', reviewed ? 'true' : 'false');
+            if (reviewed) {
+                btn.innerHTML = '<i class="fas fa-check-circle me-2" aria-hidden="true"></i>Update section selection<i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>';
+            } else {
+                btn.innerHTML = '<i class="fas fa-list-check me-2" aria-hidden="true"></i>Review sections for audiobook<i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>';
+            }
+        }
+
+        function updateAudiobookGenerateReady() {
+            const btn = document.getElementById('generateBtn');
+            const hint = document.getElementById('audiobookGenerateHint');
+            if (!btn) {
+                return;
+            }
+            const priceOk = audiobookHasValidPrice();
+            const sectionsOk = audiobookHasIncludedSections();
+            const voiceOk = audiobookHasSelectedVoice();
+            const ready = priceOk && sectionsOk && voiceOk;
+            btn.disabled = !ready;
+            btn.setAttribute('aria-disabled', ready ? 'false' : 'true');
+            updateAudiobookReviewCta();
+            if (!hint) {
+                return;
+            }
+            if (ready) {
+                hint.textContent = '';
+                hint.classList.add('d-none');
+                return;
+            }
+            const missing = [];
+            if (!sectionsOk) {
+                missing.push('review sections and select at least one part');
+            }
+            if (!priceOk) {
+                missing.push('set a price (0 for free)');
+            }
+            if (!voiceOk) {
+                missing.push('choose a voice');
+            }
+            hint.textContent = 'Before generating: ' + missing.join(', ') + '.';
+            hint.classList.remove('d-none');
         }
 
         function syncListingCouponToForm() {
@@ -721,7 +837,29 @@
             }
             {% if not book.has_audiobook %}
             loadAvailableVoices();
+            const priceInput = document.getElementById('audiobookPrice');
+            if (priceInput) {
+                priceInput.addEventListener('input', updateAudiobookGenerateReady);
+                priceInput.addEventListener('change', updateAudiobookGenerateReady);
+            }
+            bindAudiobookSegmentListEvents();
+            const btnSuggestions = document.getElementById('btnAudiobookUseSuggestions');
+            if (btnSuggestions) btnSuggestions.addEventListener('click', applyAudiobookSegmentSuggestions);
+            const btnSelectChapters = document.getElementById('btnAudiobookSelectChapters');
+            if (btnSelectChapters) btnSelectChapters.addEventListener('click', selectAllAudiobookChapters);
+            const btnClearSelection = document.getElementById('btnAudiobookClearSelection');
+            if (btnClearSelection) btnClearSelection.addEventListener('click', clearAudiobookSegmentSelection);
+            restoreAudiobookSegmentPlanIfSaved();
+            updateAudiobookGenerateReady();
             {% endif %}
+            if (new URLSearchParams(window.location.search).get('ready') === '1') {
+                showNotification('Audiobook is ready. Preview it below, then publish when you are satisfied.', 'success');
+                const publishCard = document.getElementById('audiobook-publish-actions');
+                if (publishCard) {
+                    publishCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                history.replaceState({}, '', audiobookStudioUrl);
+            }
             updatePublishButtonsUx();
             
             // Check audiobook generation status
@@ -787,7 +925,7 @@
                     if (result.has_audiobook) {
                         summaryText.textContent = 'Ready, audiobook is on your book page.';
                     } else if (!result.status || result.status === 'none') {
-                        summaryText.textContent = 'Not started, choose a voice below, then Generate Audiobook.';
+                        summaryText.textContent = 'Not started, choose a voice below, then Generate.';
                     } else if (result.status === 'pending') {
                         summaryText.textContent = 'Queued, the server will start synthesis shortly (this line updates automatically).';
                     } else if (result.status === 'processing') {
@@ -848,18 +986,22 @@
                 } else {
                     statusDisplay.style.display = 'none';
 
-                    // Completed: stop polling and update UI in-place (no forced reload/ghost scroll).
-                    if (result.has_audiobook && result.status === 'completed' && !reloadTriggered) {
+                    if (statusCheckInterval) {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                    }
+
+                    // Redirect once when generation finishes while the author is waiting.
+                    // Skip if the audiobook was already ready when this page loaded (prevents ?ready=1 reload loop).
+                    if (
+                        !audiobookWasReadyOnLoad &&
+                        result.has_audiobook &&
+                        result.status === 'completed' &&
+                        !reloadTriggered
+                    ) {
                         reloadTriggered = true;
-                        if (statusCheckInterval) {
-                            clearInterval(statusCheckInterval);
-                            statusCheckInterval = null;
-                        }
-                        const summaryTextDone = document.getElementById('audiobookSummaryText');
-                        if (summaryTextDone) {
-                            summaryTextDone.textContent = 'Ready, audiobook is on your book page.';
-                        }
-                        showNotification('Audiobook generation complete.', 'success');
+                        showNotification('Audiobook generation complete. Opening publish steps…', 'success');
+                        redirectToAudiobookStudioWhenReady();
                     }
                 }
             } catch (error) {
@@ -1051,6 +1193,7 @@
             
             // Re-render to show selection
             renderVoices();
+            updateAudiobookGenerateReady();
         }
         
         // Preload sample previews for each voice category
@@ -1075,7 +1218,8 @@
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                            voice_name: voiceName
+                            voice_name: voiceName,
+                            use_book_sample: true
                         })
                     });
                     
@@ -1156,7 +1300,8 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        voice_name: voiceName
+                        voice_name: voiceName,
+                        use_book_sample: true
                     })
                 });
                 
@@ -1215,12 +1360,151 @@
         }
 
         window._audiobookSegmentState = window._audiobookSegmentState || null;
+        {% if not book.has_audiobook and book.audiobook_segment_plan %}
+        const initialAudiobookSegmentPlan = {{ book.audiobook_segment_plan|tojson }};
+        {% else %}
+        const initialAudiobookSegmentPlan = null;
+        {% endif %}
+
+        function syncAudiobookSegmentChecksFromDom() {
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.segments) {
+                return;
+            }
+            window._audiobookSegmentState.segments.forEach(function (seg) {
+                const cb = document.getElementById('audiobook-seg-' + seg.index);
+                if (cb) {
+                    seg.include = !!cb.checked;
+                }
+            });
+        }
+
+        function setAudiobookSegmentChecked(index, checked) {
+            const cb = document.getElementById('audiobook-seg-' + index);
+            if (cb) {
+                cb.checked = !!checked;
+            }
+            if (window._audiobookSegmentState && window._audiobookSegmentState.segments) {
+                const seg = window._audiobookSegmentState.segments.find(function (s) { return s.index === index; });
+                if (seg) {
+                    seg.include = !!checked;
+                }
+            }
+        }
+
+        function renderAudiobookSegmentsList(segments) {
+            const list = document.getElementById('audiobookSegmentsList');
+            if (!list || !segments) {
+                return;
+            }
+            list.innerHTML = segments.map(function (seg) {
+                const checked = seg.include ? ' checked' : '';
+                const aiNote = _escapeHtmlAudiobook((seg.ai_reason || '').slice(0, 120));
+                const aiLabel = seg.ai_include ? 'suggested include' : 'suggested skip';
+                const kind = seg.section_kind || 'other';
+                const kindLabel = _escapeHtmlAudiobook(seg.kind_label || kind);
+                const isChapter = !!(seg.is_narrative_chapter || kind === 'chapter');
+                let badgeClass = 'bg-light text-dark border';
+                if (isChapter) badgeClass = 'bg-primary';
+                else if (kind === 'front') badgeClass = 'bg-info text-dark';
+                else if (kind === 'back') badgeClass = 'bg-secondary';
+                const boundaryNote = isChapter
+                    ? '<small class="text-primary d-block mt-1"><i class="fas fa-book-open me-1"></i>Own audio track</small>'
+                    : '<small class="text-muted d-block mt-1">Optional in audio</small>';
+                const completeBadge = seg.is_section_complete === false
+                    ? '<span class="badge bg-warning text-dark ms-2">In progress</span>'
+                    : '';
+                const aiLine = (aiNote || aiLabel)
+                    ? '<small class="text-secondary d-block mt-1">AI: ' + aiLabel + (aiNote ? (' — ' + aiNote) : '') + '</small>'
+                    : '';
+                return (
+                    '<div class="card mb-2 border-0 shadow-sm ink-audiobook-seg-card' + (isChapter ? ' border-start border-primary border-3' : '') + '">' +
+                    '<div class="card-body py-2 px-3">' +
+                    '<div class="form-check mb-0">' +
+                    '<input class="form-check-input audiobook-seg-include" type="checkbox" data-index="' + seg.index + '" id="audiobook-seg-' + seg.index + '"' + checked + '>' +
+                    '<label class="form-check-label fw-semibold" for="audiobook-seg-' + seg.index + '">' +
+                    '<span class="badge ' + badgeClass + ' me-2">' + kindLabel + '</span>' +
+                    _escapeHtmlAudiobook(seg.title) + completeBadge + '</label>' +
+                    boundaryNote +
+                    aiLine +
+                    '</div></div></div>'
+                );
+            }).join('');
+        }
+
+        function showAudiobookSegmentsPanel(result) {
+            const panel = document.getElementById('audiobookSegmentsPanel');
+            const badge = document.getElementById('audiobookClassifierBadge');
+            const statusEl = document.getElementById('audiobookPrepareStatus');
+            window._audiobookSegmentState = {
+                sourceHash: result.source_hash,
+                segments: result.segments || []
+            };
+            renderAudiobookSegmentsList(window._audiobookSegmentState.segments);
+            if (panel) panel.classList.remove('d-none');
+            if (badge) {
+                badge.classList.remove('d-none');
+                badge.textContent = result.classifier === 'gemini'
+                    ? 'Suggestions: AI'
+                    : 'Suggestions: section titles';
+            }
+            if (statusEl) {
+                statusEl.textContent = (result.segment_count || window._audiobookSegmentState.segments.length) +
+                    ' section(s) listed. Check the parts you want narrated, then generate.';
+            }
+            updateAudiobookGenerateReady();
+        }
+
+        function applyAudiobookSegmentSuggestions() {
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.segments) {
+                return;
+            }
+            window._audiobookSegmentState.segments.forEach(function (seg) {
+                setAudiobookSegmentChecked(seg.index, !!seg.ai_include);
+            });
+            updateAudiobookGenerateReady();
+        }
+
+        function selectAllAudiobookChapters() {
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.segments) {
+                return;
+            }
+            window._audiobookSegmentState.segments.forEach(function (seg) {
+                const isChapter = !!(seg.is_narrative_chapter || seg.section_kind === 'chapter');
+                setAudiobookSegmentChecked(seg.index, isChapter);
+            });
+            updateAudiobookGenerateReady();
+        }
+
+        function clearAudiobookSegmentSelection() {
+            if (!window._audiobookSegmentState || !window._audiobookSegmentState.segments) {
+                return;
+            }
+            window._audiobookSegmentState.segments.forEach(function (seg) {
+                setAudiobookSegmentChecked(seg.index, false);
+            });
+            updateAudiobookGenerateReady();
+        }
+
+        function bindAudiobookSegmentListEvents() {
+            const list = document.getElementById('audiobookSegmentsList');
+            if (!list || list.dataset.bound === '1') {
+                return;
+            }
+            list.dataset.bound = '1';
+            list.addEventListener('change', function (e) {
+                if (e.target && e.target.classList.contains('audiobook-seg-include')) {
+                    const idx = parseInt(e.target.getAttribute('data-index'), 10);
+                    if (!Number.isNaN(idx)) {
+                        setAudiobookSegmentChecked(idx, e.target.checked);
+                    }
+                    updateAudiobookGenerateReady();
+                }
+            });
+        }
 
         async function prepareAudiobookSegments() {
             const btn = document.getElementById('btnPrepareAudiobookSegments');
             const statusEl = document.getElementById('audiobookPrepareStatus');
-            const panel = document.getElementById('audiobookSegmentsPanel');
-            const badge = document.getElementById('audiobookClassifierBadge');
             if (!btn) return;
             btn.disabled = true;
             if (statusEl) statusEl.textContent = 'Loading...';
@@ -1236,53 +1520,9 @@
                     if (statusEl) statusEl.textContent = '';
                     return;
                 }
-                window._audiobookSegmentState = {
-                    sourceHash: result.source_hash,
-                    segments: result.segments || []
-                };
-                const list = document.getElementById('audiobookSegmentsList');
-                if (list && result.segments) {
-                    list.innerHTML = result.segments.map(function (seg) {
-                        const prev = (seg.preview || '').slice(0, 320);
-                        const dots = (seg.preview || '').length > 320 ? '...' : '';
-                        const checked = seg.include ? ' checked' : '';
-                        const aiNote = _escapeHtmlAudiobook((seg.ai_reason || '').slice(0, 200));
-                        const aiLabel = seg.ai_include ? 'suggested include' : 'suggested skip';
-                        const kind = seg.section_kind || 'other';
-                        const kindLabel = _escapeHtmlAudiobook(seg.kind_label || kind);
-                        const isChapter = !!(seg.is_narrative_chapter || kind === 'chapter');
-                        let badgeClass = 'bg-light text-dark border';
-                        if (isChapter) badgeClass = 'bg-primary';
-                        else if (kind === 'front') badgeClass = 'bg-info text-dark';
-                        else if (kind === 'back') badgeClass = 'bg-secondary';
-                        const boundaryNote = isChapter
-                            ? '<small class="text-primary d-block mb-1"><i class="fas fa-book-open me-1"></i>Content chapter, own audio track (narration boundary)</small>'
-                            : '<small class="text-muted d-block mb-1">Optional in audio, not a content chapter boundary</small>';
-                        return (
-                            '<div class="card mb-2 border-0 shadow-sm' + (isChapter ? ' border-start border-primary border-3' : '') + '">' +
-                            '<div class="card-body py-2 px-3">' +
-                            '<div class="form-check">' +
-                            '<input class="form-check-input audiobook-seg-include" type="checkbox" data-index="' + seg.index + '" id="audiobook-seg-' + seg.index + '"' + checked + '>' +
-                            '<label class="form-check-label fw-semibold" for="audiobook-seg-' + seg.index + '">' +
-                            '<span class="badge ' + badgeClass + ' me-2">' + kindLabel + '</span>' +
-                            _escapeHtmlAudiobook(seg.title) + '</label>' +
-                            '</div>' +
-                            boundaryNote +
-                            '<p class="small text-muted mb-1 mt-1">' + _escapeHtmlAudiobook(prev) + dots + '</p>' +
-                            '<small class="text-secondary">AI: ' + aiLabel + (aiNote ? (', ' + aiNote) : '') + '</small>' +
-                            '</div></div>'
-                        );
-                    }).join('');
-                }
-                if (panel) panel.classList.remove('d-none');
-                if (badge) {
-                    badge.classList.remove('d-none');
-                    badge.textContent = result.classifier === 'gemini'
-                        ? 'Suggestions: AI'
-                        : 'Suggestions: section titles';
-                }
-                if (statusEl) statusEl.textContent = result.segment_count + ' section(s), adjust toggles, then generate.';
-                showNotification('Sections loaded. Adjust checkboxes if needed, then generate.', 'success');
+                showAudiobookSegmentsPanel(result);
+                bindAudiobookSegmentListEvents();
+                showNotification('Sections loaded. Check the parts you want narrated, then generate.', 'success');
             } catch (e) {
                 console.error(e);
                 showNotification('Failed to load sections', 'error');
@@ -1290,6 +1530,19 @@
             } finally {
                 btn.disabled = false;
             }
+        }
+
+        function restoreAudiobookSegmentPlanIfSaved() {
+            if (!initialAudiobookSegmentPlan || !initialAudiobookSegmentPlan.source_hash || !initialAudiobookSegmentPlan.segments) {
+                return;
+            }
+            showAudiobookSegmentsPanel({
+                source_hash: initialAudiobookSegmentPlan.source_hash,
+                classifier: initialAudiobookSegmentPlan.classifier || 'heuristic',
+                segment_count: initialAudiobookSegmentPlan.segment_count || initialAudiobookSegmentPlan.segments.length,
+                segments: initialAudiobookSegmentPlan.segments
+            });
+            bindAudiobookSegmentListEvents();
         }
 
         // Audiobook generation functions
@@ -1315,11 +1568,16 @@
                 showNotification('Click "Review sections for audiobook" first, then generate.', 'error');
                 return;
             }
+            if (!audiobookHasIncludedSections()) {
+                showNotification('Select at least one section to include in the audiobook.', 'error');
+                return;
+            }
+            syncAudiobookSegmentChecksFromDom();
             const n = window._audiobookSegmentState.segments.length;
             const segment_includes = [];
             for (let i = 0; i < n; i++) {
                 const cb = document.getElementById('audiobook-seg-' + i);
-                segment_includes.push(cb ? cb.checked : !!(window._audiobookSegmentState.segments[i] && window._audiobookSegmentState.segments[i].include));
+                segment_includes.push(!!(cb && cb.checked));
             }
             if (!segment_includes.some(Boolean)) {
                 showNotification('Select at least one section to include in the audiobook.', 'error');
@@ -1352,6 +1610,7 @@
                     if (segPanel) segPanel.classList.add('d-none');
                     var prepSt = document.getElementById('audiobookPrepareStatus');
                     if (prepSt) prepSt.textContent = '';
+                    updateAudiobookGenerateReady();
                 }
                 
                 if (result.success) {
@@ -1362,48 +1621,41 @@
                     }, 2000);
                 } else {
                     showNotification(result.error || 'Failed to start audiobook generation', 'error');
-                    // Re-enable button
-                    generateBtn.disabled = false;
-                    generateBtn.innerHTML = '<i class="fas fa-headphones"></i> Generate Audiobook';
+                    updateAudiobookGenerateReady();
+                    generateBtn.innerHTML = '<i class="fas fa-headphones me-2" aria-hidden="true"></i>Generate';
                 }
             } catch (error) {
                 console.error('Error generating audiobook:', error);
                 showNotification('An error occurred while starting audiobook generation', 'error');
-                // Re-enable button
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = '<i class="fas fa-headphones"></i> Generate Audiobook';
+                updateAudiobookGenerateReady();
+                generateBtn.innerHTML = '<i class="fas fa-headphones me-2" aria-hidden="true"></i>Generate';
             }
         }
         
-        async function regenerateAudiobook() {
-            if (confirm('Are you sure you want to regenerate the audiobook? This will replace the existing version.')) {
-                // Reset audiobook status
-                try {
-                    const response = await fetch('{{ url_for("book_platform.generate_audiobook_for_book", book_id=book.id) }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            audiobook_price: {{ book.audiobook_price or 0 }},
-                            voice_name: '{{ book.audiobook_voice or "en-US-Neural2-A" }}'
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        showNotification('Audiobook regeneration started', 'success');
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 2000);
-                    } else {
-                        showNotification(result.error || 'Failed to start audiobook regeneration', 'error');
-                    }
-                } catch (error) {
-                    console.error('Error regenerating audiobook:', error);
-                    showNotification('An error occurred while starting audiobook regeneration', 'error');
+        async function startAudiobookRegeneration() {
+            if (!confirm(
+                'Regenerate audiobook? The current audio will be removed. You will choose sections, price, and voice again.'
+            )) {
+                return;
+            }
+            try {
+                const response = await fetch('{{ url_for("book_platform.reset_audiobook", book_id=book.id) }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showNotification(result.message || 'Ready to regenerate audiobook.', 'success');
+                    setTimeout(function () {
+                        window.location.href = '{{ url_for("book_platform.book_audiobook", book_id=book.id) }}';
+                    }, 800);
+                } else {
+                    showNotification(result.error || 'Could not reset audiobook', 'error');
                 }
+            } catch (error) {
+                console.error('Error resetting audiobook:', error);
+                showNotification('An error occurred while resetting the audiobook', 'error');
             }
         }
 
@@ -1424,5 +1676,6 @@
         }
 
     </script>
+    {% include 'includes/_ndotonic_mission_footer.html' %}
 </body>
 </html>

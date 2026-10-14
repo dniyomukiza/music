@@ -218,7 +218,11 @@ def campaign_open_for_contributions(
             )
         return False, 'This campaign is no longer accepting contributions.'
 
-    if status in (CampaignStatus.ACTIVE, CampaignStatus.FUNDED):
+    # The displayed funding goal is the cap. Do not silently accept
+    # overfunding without a separately approved stretch-goal model.
+    if status == CampaignStatus.ACTIVE and not campaign_goal_reached(campaign):
         return True, None
+    if status == CampaignStatus.FUNDED or campaign_goal_reached(campaign):
+        return False, 'This campaign has reached its funding goal and is no longer accepting contributions.'
 
     return False, 'This campaign is not currently accepting contributions.'

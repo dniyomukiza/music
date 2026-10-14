@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from glconnect.audiobook_text_segments import build_uploaded_book_audiobook_chapters
 from glconnect.book_platform_models import BookChapter, BookProject
-from glconnect.book_utils import is_book_published, resolve_section_kind, section_kind_label
+from glconnect.book_utils import resolve_section_kind, section_kind_label
 from glconnect.digital_book_processor import digital_book_processor
 
 logger = logging.getLogger(__name__)
@@ -111,42 +111,22 @@ def build_audiobook_source(
                 "chapters_for_audio": [],
                 "source_hash": "",
             }
-        chapters = [ch for ch in all_chapters if ch.is_published]
-        if not chapters:
-            chapters_with_content = [ch for ch in all_chapters if (ch.content or ch.summary)]
-            if is_book_published(book) and chapters_with_content:
-                logger.info(
-                    "Book %s is published but chapters not individually marked. Using chapters with content.",
-                    book_id,
-                )
-                chapters = chapters_with_content
-            else:
-                unpublished_with_content = [
-                    ch for ch in all_chapters if not ch.is_published and (ch.content or ch.summary)
-                ]
-                unpublished_count = len(unpublished_with_content)
-                error_msg = (
-                    f"No complete sections found. You have {len(all_chapters)} section(s) total, "
-                    "but none are marked complete. "
-                )
-                if unpublished_with_content:
-                    error_msg += (
-                        f"You have {unpublished_count} in-progress section(s) with content. "
-                    )
-                error_msg += (
-                    'Mark each section you want in audio as "Chapter complete" before generating an audiobook.'
-                )
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "full_text": "",
-                    "chapters_for_audio": [],
-                    "source_hash": "",
-                }
+        chapters_with_content = [ch for ch in all_chapters if (ch.content or ch.summary)]
+        if not chapters_with_content:
+            return {
+                "success": False,
+                "error": (
+                    f"No narratable sections found. You have {len(all_chapters)} section(s), "
+                    "but none have content yet. Add text to the sections you want in audio, then try again."
+                ),
+                "full_text": "",
+                "chapters_for_audio": [],
+                "source_hash": "",
+            }
 
         chapters_for_audio = []
         narrative_index = 0
-        for chapter in chapters:
+        for chapter in chapters_with_content:
             kind = resolve_section_kind(chapter.title, getattr(chapter, 'section_kind', None))
             if kind == 'chapter':
                 narrative_index += 1
@@ -177,6 +157,7 @@ def build_audiobook_source(
                         "section_kind": kind,
                         "kind_label": section_kind_label(kind),
                         "is_narrative_chapter": kind == 'chapter',
+                        "is_section_complete": bool(chapter.is_published),
                         "book_chapter_id": chapter.id,
                     }
                 )
@@ -186,8 +167,8 @@ def build_audiobook_source(
             return {
                 "success": False,
                 "error": (
-                    "Published chapters found but they contain no text content. "
-                    "Please add content to your chapters before generating an audiobook."
+                    "Sections with content were found but contain no narratable text. "
+                    "Please add content to your sections before generating an audiobook."
                 ),
                 "full_text": "",
                 "chapters_for_audio": [],

@@ -1,0 +1,105 @@
+{# Campaign readiness progress + optional requirements list.
+   Vars: investment_readiness, prefix (unique id prefix), intro_prefix, requirements_interactive (default true) #}
+{% set total_requirements = investment_readiness.requirement_total|default(investment_readiness.requirements|length|default(5)) %}
+{% set reqs = investment_readiness.requirements|default([]) %}
+{% set completed = reqs|selectattr('met')|list|length if reqs else (total_requirements - investment_readiness.issues|length) %}
+{% set progress_pct = (completed / total_requirements * 100)|round if total_requirements else 0 %}
+{% set _prefix = prefix|default('campaign-req') %}
+{% set _intro = intro_prefix|default('If you want a campaign later:') %}
+{% set _interactive = requirements_interactive|default(true) %}
+
+<div class="ink-campaign-req-wrap{% if not _interactive %} ink-campaign-req-wrap--static{% endif %}{% if _interactive %} position-relative{% endif %}"{% if _interactive %} data-campaign-req-wrap="{{ _prefix }}"{% endif %}>
+    <p class="small text-muted mb-2">
+        {{ _intro }} {{ completed }}/{{ total_requirements }} optional
+        {% if _interactive %}
+        <button type="button"
+                class="ink-campaign-req-toggle"
+                id="{{ _prefix }}-toggle"
+                aria-expanded="false"
+                aria-controls="{{ _prefix }}-panel">
+            requirements
+        </button>
+        {% else %}
+        requirements
+        {% endif %}
+        met
+    </p>
+    <div class="progress mb-0" style="height: 6px;">
+        <div class="progress-bar bg-warning" style="width: {{ progress_pct }}%"></div>
+    </div>
+    <div class="{% if _interactive %}ink-campaign-req-panel d-none{% else %}ink-campaign-req-static{% endif %}"
+         id="{{ _prefix }}-panel"
+         {% if _interactive %}role="region" aria-labelledby="{{ _prefix }}-toggle"{% endif %}>
+        <p class="small fw-semibold text-light mb-2 mb-md-2">Optional campaign requirements</p>
+        <ul class="list-unstyled small mb-0 ink-campaign-req-list">
+            {% for req in reqs %}
+            <li class="{% if req.met %}is-met{% else %}is-unmet{% endif %}">
+                <i class="fas {% if req.met %}fa-check-circle{% else %}fa-circle{% endif %} me-2" aria-hidden="true"></i>{{ req.label }}
+            </li>
+            {% else %}
+            {% for issue in investment_readiness.issues %}
+            <li class="is-unmet">
+                <i class="fas fa-circle me-2" aria-hidden="true"></i>{{ issue }}
+            </li>
+            {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% if _interactive %}
+<script>
+(function () {
+    if (window.__inkCampaignReqBound) return;
+    window.__inkCampaignReqBound = true;
+    function bindCampaignReqToggles() {
+        document.querySelectorAll('[data-campaign-req-wrap]').forEach(function (wrap) {
+            if (wrap.dataset.campaignReqBound === '1') return;
+            wrap.dataset.campaignReqBound = '1';
+            var toggle = wrap.querySelector('.ink-campaign-req-toggle');
+            var panel = wrap.querySelector('.ink-campaign-req-panel');
+            if (!toggle || !panel) return;
+            function closePanel() {
+                panel.classList.add('d-none');
+                toggle.classList.remove('is-open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+            function openPanel() {
+                panel.classList.remove('d-none');
+                toggle.classList.add('is-open');
+                toggle.setAttribute('aria-expanded', 'true');
+            }
+            toggle.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (panel.classList.contains('d-none')) openPanel();
+                else closePanel();
+            });
+            var hoverOpenTimer = null;
+            var hoverCloseTimer = null;
+            wrap.addEventListener('mouseenter', function () {
+                clearTimeout(hoverCloseTimer);
+                hoverOpenTimer = setTimeout(openPanel, 150);
+            });
+            wrap.addEventListener('mouseleave', function () {
+                clearTimeout(hoverOpenTimer);
+                hoverCloseTimer = setTimeout(closePanel, 220);
+            });
+            panel.addEventListener('click', function (e) {
+                e.stopPropagation();
+            });
+            document.addEventListener('click', function () {
+                closePanel();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closePanel();
+            });
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindCampaignReqToggles);
+    } else {
+        bindCampaignReqToggles();
+    }
+})();
+</script>
+{% endif %}

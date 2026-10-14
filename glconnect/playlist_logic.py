@@ -18,12 +18,16 @@ def add_to_playlist_impl(
     """
     from glconnect.models import Song, DownloadedSong, Playlist
 
+    from glconnect.eleven_catalog import is_public_player_song
+
     if song_id:
         song = session.query(Song).get(song_id)
         if not song:
             return False, "Song not found", 404
         if not song.is_approved():
             return False, "This song is not available for playlists yet.", 403
+        if not is_public_player_song(song):
+            return False, "This song is not available in the player.", 403
         existing = session.query(Playlist).filter_by(user_id=user_id, song_id=song_id).first()
         if existing:
             return True, f"Song is already in your playlist.", None
@@ -31,15 +35,7 @@ def add_to_playlist_impl(
         session.commit()
         return True, f"'{song.name}' added to your playlist!", None
     if download_id:
-        download = session.query(DownloadedSong).get(download_id)
-        if not download:
-            return False, "Download not found", 404
-        existing = session.query(Playlist).filter_by(user_id=user_id, download_id=download_id).first()
-        if existing:
-            return True, "Song is already in your playlist.", None
-        session.add(Playlist(user_id=user_id, song_id=None, download_id=download.id))
-        session.commit()
-        return True, f"'{download.name}' added to your playlist!", None
+        return False, "YouTube downloads are not available in the music player.", 403
     return False, "Provide song_id or download_id", 400
 
 

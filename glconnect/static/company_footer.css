@@ -1,5 +1,20 @@
 @import url("glc-theme.css");
 
+/* Short pages keep Company at the bottom of the window. */
+body.glc-footer-pin {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+body.glc-footer-pin > .container {
+  flex: 1 0 auto;
+}
+
+body.glc-footer-pin > .company-footer {
+  margin-top: auto;
+}
+
 .company-footer {
   position: relative;
   z-index: 10;
@@ -148,5 +163,25 @@
   .company-footer-dropdown a:hover,
   .company-footer-dropdown a:focus-visible {
     transform: none;
+  }
+}
+
+.company-nav-slot {
+  display: flex;
+  align-items: center;
+}
+
+.company-footer-menu--nav .company-footer-toggle {
+  font-size: 0.72rem;
+}
+
+.company-footer-menu--nav .company-footer-dropdown {
+  bottom: auto;
+  top: calc(100% + 0.55rem);
+}
+
+@media (max-width: 768px) {
+  .company-nav-slot {
+    margin-left: auto;
   }
 }

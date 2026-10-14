@@ -1,5 +1,8 @@
 # Memory budget (~4GB VPS): app + fastapi + liquidsoap + icecast + nginx + OS/Docker overhead.
 # Override: APP_MEM_LIMIT=2g docker compose up -d
+# Logs: docker compose --profile video logs -f app
+#   Service name is `app`; container name is `myapp`. `docker compose logs myapp` will fail.
+name: music
 services:
   app:
     image: myapp:latest
@@ -116,7 +119,7 @@ services:
     # Image entrypoint is already /app/liquidsoap — pass script path only (see Docker Hub phasecorex/liquidsoap).
     command: /liqfolder/scripts/main.liq
     environment:
-     - TZ=America/New_York
+     - TZ=America/Los_Angeles
     restart: unless-stopped
     mem_limit: 384M
     mem_reservation: 128M

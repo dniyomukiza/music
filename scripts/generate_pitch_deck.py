@@ -11,6 +11,7 @@ from pptx.util import Inches, Pt
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "docs" / "pitch-deck"
+LOGO_PATH = ROOT / "glconnect" / "static" / "images" / "ndotonic_official.png"
 
 # Brand palette
 BG = RGBColor(0x06, 0x08, 0x07)
@@ -37,6 +38,21 @@ class Deck:
         self.prs.slide_width = SLIDE_W
         self.prs.slide_height = SLIDE_H
         self.num = 0
+        self.logo_path = LOGO_PATH if LOGO_PATH.is_file() else None
+
+    def _logo(self, slide, *, left, top, height):
+        """Add official Ndotonic logo; returns picture shape or None."""
+        if not self.logo_path:
+            return None
+        return slide.shapes.add_picture(str(self.logo_path), left, top, height=height)
+
+    def _logo_centered(self, slide, *, top, height):
+        if not self.logo_path:
+            return None
+        # Approximate square logo for horizontal centering before aspect ratio is applied.
+        width = height
+        left = (SLIDE_W - width) / 2
+        return slide.shapes.add_picture(str(self.logo_path), left, top, height=height)
 
     def slide(self):
         self.num += 1
@@ -93,10 +109,14 @@ class Deck:
         rule.fill.solid()
         rule.fill.fore_color.rgb = CARD_EDGE
         rule.line.fill.background()
-        _text(slide, MARGIN, Inches(7.05), Inches(4), Inches(0.3),
-              "NDOTONIC", size=9, bold=True, color=BRONZE, tracking=0.18)
+        footer_logo_h = Inches(0.28)
+        if self._logo(slide, left=MARGIN, top=Inches(7.02), height=footer_logo_h):
+            pass
+        else:
+            _text(slide, MARGIN, Inches(7.05), Inches(4), Inches(0.3),
+                  "NDOTONIC", size=9, bold=True, color=BRONZE, tracking=0.18)
         _text(slide, Inches(5.5), Inches(7.05), Inches(2.3), Inches(0.3),
-              "glc.cool", size=9, color=MUTED, align=PP_ALIGN.CENTER)
+              "ndotonic.com", size=9, color=MUTED, align=PP_ALIGN.CENTER)
         _text(slide, Inches(11.3), Inches(7.05), Inches(1.3), Inches(0.3),
               f"{num:02d}", size=9, bold=True, color=GOLD, align=PP_ALIGN.RIGHT)
 
@@ -181,12 +201,19 @@ def slide_title(deck):
     glow.fill.fore_color.rgb = RGBColor(0x20, 0x18, 0x06)
     glow.line.fill.background()
 
-    _text(slide, Inches(0.7), Inches(1.35), Inches(12), Inches(0.5),
-          "NDOTONIC", size=13, bold=True, color=GOLD, align=PP_ALIGN.CENTER, tracking=0.35)
-    _text(slide, Inches(0.7), Inches(2.05), Inches(12), Inches(2.2),
+    if deck._logo_centered(slide, top=Inches(0.55), height=Inches(1.35)):
+        headline_top = Inches(2.15)
+        tagline_top = Inches(4.45)
+    else:
+        _text(slide, Inches(0.7), Inches(1.35), Inches(12), Inches(0.5),
+              "NDOTONIC", size=13, bold=True, color=GOLD, align=PP_ALIGN.CENTER, tracking=0.35)
+        headline_top = Inches(2.05)
+        tagline_top = Inches(4.35)
+
+    _text(slide, Inches(0.7), headline_top, Inches(12), Inches(2.2),
           "Turning stories into\npublished books", size=48, bold=True, align=PP_ALIGN.CENTER)
-    _text(slide, Inches(1.5), Inches(4.35), Inches(10.3), Inches(0.6),
-          "Ndotonic builds the AI native author platform.", size=19, color=MUTED, align=PP_ALIGN.CENTER)
+    _text(slide, Inches(1.5), tagline_top, Inches(10.3), Inches(0.6),
+          "Ndotonic builds the AI native author platform, live at ndotonic.com", size=19, color=MUTED, align=PP_ALIGN.CENTER)
     _text(slide, Inches(0.7), Inches(6.15), Inches(12), Inches(0.4),
           "INVESTOR & PARTNER DECK", size=11, bold=True, color=GOLD_SOFT, align=PP_ALIGN.CENTER, tracking=0.2)
 
@@ -194,11 +221,15 @@ def slide_title(deck):
 def slide_problem(deck):
     slide = deck.slide()
     deck._kicker(slide, "The problem")
-    _text(slide, MARGIN, Inches(0.88), CONTENT_W, Inches(1.1),
-          "Independent authors are forced to\nstitch together a dozen tools",
-          size=28, bold=True)
+    _text(slide, MARGIN, Inches(0.88), CONTENT_W, Inches(1.35),
+          "Lack of funding, exposure, and editorial gates\nkeep impactful stories uncovered",
+          size=26, bold=True)
+    deck._subtitle(slide,
+                   "Our founder saw this as a journalist: authors still stitch a dozen tools across "
+                   "platforms, with funding, writing, publishing, and promotion on separate sites.",
+                   top=Inches(2.35), size=13)
 
-    deck._card(slide, MARGIN, Inches(2.28), CONTENT_W, Inches(4.35), edge=GOLD_SOFT)
+    deck._card(slide, MARGIN, Inches(3.05), CONTENT_W, Inches(3.55), edge=GOLD_SOFT)
     rows = [
         ("Area", "Pain"),
         ("Discovery & funding", "Campaigns on one platform, pitches on another → Funding campaigns"),
@@ -208,7 +239,7 @@ def slide_problem(deck):
         ("Sales", "Digital, audio, and print sales in separate channels → Marketplace"),
     ]
     table = slide.shapes.add_table(
-        len(rows), 2, Inches(0.95), Inches(2.48), Inches(11.45), Inches(4.0),
+        len(rows), 2, Inches(0.95), Inches(3.25), Inches(11.45), Inches(3.25),
     ).table
     table.columns[0].width = Inches(2.85)
     table.columns[1].width = Inches(8.6)
@@ -267,8 +298,8 @@ def slide_pillars(deck):
     deck._title(slide, "Why Ndotonic: four pillars", size=32)
     cards = [
         ("01", "Get Discovered", "Upload a pitch and launch patron book funding campaigns.", GOLD),
-        ("02", "Promote Your Story", "GLC Media radio & TV stream promoting stories and books.", GOLD_SOFT),
-        ("03", "Self publish", "Ink Studio, AI editing toolkit, ISBN, ebook · print · audiobook.", GOLD),
+        ("02", "Promote your book story", "GLC Media radio & TV stream promoting stories and books.", GOLD_SOFT),
+        ("03", "Self publish", "Ink Studio, AI editing, ISBN, ebook · print · AI-narrated audiobook.", GOLD),
         ("04", "Monetize your work", "Marketplace digital, audio, and print worldwide.", GOLD_SOFT),
     ]
     positions = [
@@ -334,7 +365,7 @@ def slide_market(deck):
               small, size=13, color=MUTED)
     deck._card(slide, MARGIN, Inches(4.75), CONTENT_W, Inches(1.35))
     _text(slide, Inches(1.05), Inches(5.05), Inches(10.8), Inches(0.9),
-          "Ndotonic targets authors who want discovery, craft tools, multi format publishing, and GLC Media broadcast promotion without five vendors.",
+          "Ndotonic targets authors, especially in high-bar languages and regions, who want discovery, craft tools, multi format publishing, and GLC Media without five vendors.",
           size=14, color=TEXT)
 
 
@@ -369,17 +400,17 @@ def slide_business(deck):
 def slide_traction(deck):
     slide = deck.slide()
     deck._kicker(slide, "Traction")
-    deck._title(slide, "Live at glc.cool", size=36)
+    deck._title(slide, "Live at ndotonic.com", size=36)
     panels = [
-        ("Ndotonic platform", [
-            "Ink Studio · Patron campaigns · Marketplace",
-            "AI editing (6 modes) · Stripe payouts",
-            "Publishing pipeline end to end",
+        ("Shipped, not a prototype", [
+            "Ink Studio · Patron campaigns · Marketplace · Audiobook studio",
+            "AI editing (6 modes) · Stripe payouts · Publishing pipeline",
+            "Python/Flask · PostgreSQL · Gemini · Google Cloud TTS",
         ], MARGIN),
-        ("GLC Media", [
-            "Radio & TV stream",
-            "Live broadcast & author features",
-            "Editorial amplification · Publicity tools",
+        ("Stage & GLC Media", [
+            "Bootstrapped founder-built; testing workflow pre-scale",
+            "Radio & TV stream · Content hub & podcasts",
+            "Live broadcast · Editorial amplification",
         ], Inches(6.85)),
     ]
     for title, items, left in panels:
@@ -404,6 +435,7 @@ def slide_competition(deck):
         ("Patron campaigns", "✓", "·", "✓", "✓"),
         ("Writing studio", "✓", "·", "·", "·"),
         ("AI craft editing", "✓", "·", "·", "·"),
+        ("AI audiobook production", "✓", "·", "·", "·"),
         ("Multi format store", "✓", "✓", "·", "·"),
         ("Radio/TV (GLC Media)", "✓", "·", "·", "·"),
     ]
@@ -472,10 +504,10 @@ def slide_vision(deck):
 def slide_team(deck):
     slide = deck.slide()
     deck._kicker(slide, "Team")
-    deck._title(slide, "Ndotonic & GLC Media", size=32)
+    deck._title(slide, "Founder-led, hiring to scale", size=32)
     entities = [
-        ("Ndotonic", "The company: Ink Studio, campaigns, marketplace, AI tools", MARGIN),
-        ("GLC Media", "Radio & TV stream promoting stories and books", Inches(6.85)),
+        ("Today: solo founder", "Journalist turned builder; shipped ndotonic.com end to end. Bootstrapped AI credits through build and test.", MARGIN),
+        ("Building toward", "Co-founder CTO, AI engineers, QA, security. First-gen immigrant, recent grad. Investment accelerates team and GTM.", Inches(6.85)),
     ]
     for name, desc, left in entities:
         deck._card(slide, left, Inches(2.05), Inches(5.75), Inches(2.35), edge=GOLD_SOFT)
@@ -487,7 +519,7 @@ def slide_team(deck):
     _text(slide, Inches(1.05), Inches(5.0), Inches(10.8), Inches(0.45),
           "Mission: Uncover hidden potential and amplify unheard voices.", size=14, bold=True, color=GOLD)
     _text(slide, Inches(1.05), Inches(5.45), Inches(10.8), Inches(0.45),
-          "Hiring: Co founder CTO, AI engineers, QA, security", size=13, color=MUTED)
+          "GLC Media: radio & TV stream promoting stories and books", size=13, color=MUTED)
 
 
 def slide_ask(deck):
@@ -498,30 +530,38 @@ def slide_ask(deck):
     glow.fill.fore_color.rgb = RGBColor(0x22, 0x1A, 0x06)
     glow.line.fill.background()
 
+    deck._logo_centered(slide, top=Inches(0.45), height=Inches(0.95))
+
     deck._kicker(slide, "The ask")
-    _text(slide, Inches(0.7), Inches(1.15), Inches(12), Inches(0.9),
+    _text(slide, Inches(0.7), Inches(1.55), Inches(12), Inches(0.9),
           "Partner with Ndotonic", size=40, bold=True, align=PP_ALIGN.CENTER)
 
-    deck._card(slide, Inches(2.2), Inches(2.35), Inches(8.9), Inches(2.55), edge=GOLD)
+    deck._card(slide, Inches(2.2), Inches(2.55), Inches(8.9), Inches(2.55), edge=GOLD)
     _bullets(slide, [
         "Strategic investment: author platform & GLC Media",
         "Publishing & distribution partnerships",
         "Broadcast amplification via GLC Media",
-    ], Inches(2.65), Inches(2.65), Inches(8.0), Inches(2.0), size=15, color=TEXT, gap=14)
+    ], Inches(2.65), Inches(2.75), Inches(8.0), Inches(2.0), size=15, color=TEXT, gap=14)
 
-    contact = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(3.4), Inches(5.15), Inches(6.5), Inches(1.15))
+    contact = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(3.4), Inches(5.15), Inches(6.5), Inches(1.55))
     contact.fill.solid()
     contact.fill.fore_color.rgb = RGBColor(0x18, 0x14, 0x06)
     contact.line.color.rgb = GOLD
     contact.line.width = Pt(1.5)
-    _text(slide, Inches(3.4), Inches(5.38), Inches(6.5), Inches(0.35),
-          "Email: info@ndotonic.com", size=15, bold=True, color=GOLD, align=PP_ALIGN.CENTER)
+    _text(slide, Inches(3.4), Inches(5.25), Inches(6.5), Inches(0.35),
+          "ndotonic.com", size=15, bold=True, color=GOLD, align=PP_ALIGN.CENTER)
+    _text(slide, Inches(3.4), Inches(5.52), Inches(6.5), Inches(0.35),
+          "Email: info@ndotonic.com", size=14, color=TEXT, align=PP_ALIGN.CENTER)
     _text(slide, Inches(3.4), Inches(5.78), Inches(6.5), Inches(0.35),
-          "Instagram: @GLConnect_cool", size=14, color=TEXT, align=PP_ALIGN.CENTER)
+          "Phone: 628-270-1430", size=14, color=TEXT, align=PP_ALIGN.CENTER)
+    _text(slide, Inches(3.4), Inches(6.04), Inches(6.5), Inches(0.35),
+          "Instagram: @ndotonic_", size=13, color=MUTED, align=PP_ALIGN.CENTER)
 
 
 def build_pptx():
     deck = Deck()
+    if not deck.logo_path:
+        print(f"Warning: logo not found at {LOGO_PATH}; using text fallback.")
     slide_title(deck)
     slide_problem(deck)
     slide_solution(deck)
@@ -536,11 +576,237 @@ def build_pptx():
     slide_ask(deck)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    out = OUT_DIR / "Ndotonic_Pitch_Deck.pptx"
+    out = OUT_DIR / "Ndotonic.pptx"
+    deck.prs.save(str(out))
+    return out
+
+
+def slide_hackathon_title(deck):
+    slide = deck.slide()
+    deck._bg(slide, deep=True)
+    deck._logo_centered(slide, top=Inches(0.55), height=Inches(1.2))
+    _text(slide, Inches(0.7), Inches(2.0), Inches(12), Inches(1.8),
+          "Turning stories into\npublished books", size=44, bold=True, align=PP_ALIGN.CENTER)
+    _text(slide, Inches(1.2), Inches(4.2), Inches(10), Inches(0.6),
+          "Live at ndotonic.com",
+          size=20, color=GOLD, align=PP_ALIGN.CENTER)
+
+
+def slide_hackathon_inspiration(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "Inspiration")
+    _text(slide, MARGIN, Inches(0.88), CONTENT_W, Inches(1.1),
+          "Lack of funding, exposure, and editorial gates\nkeep impactful stories uncovered",
+          size=26, bold=True)
+    deck._subtitle(slide,
+                   "Before transitioning into tech, independent authors kept telling us the same thing: "
+                   "to ship one book they had to stitch together a dozen tools.",
+                   top=Inches(2.05), size=13)
+    pains = [
+        ("Funding", "One site"),
+        ("Writing", "Another"),
+        ("Publishing", "Elsewhere"),
+        ("Audiobooks", "A fourth tool"),
+        ("Promotion", "Algorithms and editorial gates they did not control"),
+    ]
+    deck._card(slide, MARGIN, Inches(2.75), CONTENT_W, Inches(1.55), edge=GOLD_SOFT)
+    y = Inches(2.92)
+    for label, body in pains:
+        _text(slide, MARGIN + Inches(0.3), y, Inches(2.0), Inches(0.3),
+              label, size=11, bold=True, color=GOLD)
+        _text(slide, MARGIN + Inches(2.25), y, Inches(9.0), Inches(0.3),
+              body, size=11, color=MUTED)
+        y += Inches(0.26)
+    _text(slide, MARGIN, Inches(4.45), CONTENT_W, Inches(0.55),
+          "Especially where published books in local languages are hard to find, fund, and distribute, "
+          "even though storytelling is already part of everyday life.",
+          size=12, color=TEXT)
+    _text(slide, MARGIN, Inches(5.1), CONTENT_W, Inches(0.9),
+          "We built Ndotonic to democratize knowledge sharing through real-life stories: patron support, "
+          "AI editing in the writing flow, ebook and AI-narrated audiobook from one title, and owned "
+          "promotion through GLC Media radio and TV.",
+          size=12, color=MUTED)
+    _text(slide, MARGIN, Inches(6.05), CONTENT_W, Inches(0.35),
+          "The vision: turn stories into published books.", size=13, bold=True, color=GOLD)
+
+
+def slide_hackathon_what(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "What it does")
+    deck._title(slide, "First pitch to paying reader", size=30)
+    _text(slide, MARGIN, Inches(1.95), CONTENT_W, Inches(0.4),
+          "Pitch → Fund → Write → Publish → GLC Media → Monetize",
+          size=15, bold=True, color=GOLD)
+    pillars = [
+        ("01", "Get Discovered", "Patron book-funding campaigns from a story pitch"),
+        ("02", "Promote your book story", "GLC Media radio and TV stream authors' stories and books"),
+        ("03", "Self publish", "Ink Studio, six AI editing modes, ISBN, ebook · print · audiobook"),
+        ("04", "Monetize your work", "Marketplace: digital editions, audiobooks, worldwide print"),
+    ]
+    positions = [
+        (MARGIN, Inches(2.5), Inches(5.75), Inches(1.55)),
+        (Inches(6.85), Inches(2.5), Inches(5.75), Inches(1.55)),
+        (MARGIN, Inches(4.25), Inches(5.75), Inches(1.55)),
+        (Inches(6.85), Inches(4.25), Inches(5.75), Inches(1.55)),
+    ]
+    for (num, title, body), (left, top, w, h) in zip(pillars, positions):
+        deck._card(slide, left, top, w, h, fill=RGBColor(0x0A, 0x0D, 0x0B))
+        _text(slide, left + Inches(0.22), top + Inches(0.15), Inches(0.6), Inches(0.35),
+              num, size=18, bold=True, color=GOLD)
+        _text(slide, left + Inches(0.22), top + Inches(0.5), w - Inches(0.35), Inches(0.55),
+              title, size=13, bold=True)
+        _text(slide, left + Inches(0.22), top + Inches(1.05), w - Inches(0.35), Inches(0.45),
+              body, size=10, color=MUTED)
+    _text(slide, MARGIN, Inches(6.0), CONTENT_W, Inches(0.55),
+          "Six surfaces, one workflow: Ink Studio · Publishing · Audiobook · Marketplace · "
+          "Campaigns · GLC Media (Icecast radio, HLS TV, broadcast promotion)",
+          size=11, color=TEXT)
+
+
+def slide_hackathon_what_gemini(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "What it does")
+    deck._title(slide, "Gemini inside the author workflow", size=30)
+    deck._card(slide, MARGIN, Inches(2.05), CONTENT_W, Inches(2.2), edge=GOLD_SOFT)
+    _text(slide, MARGIN + Inches(0.35), Inches(2.35), CONTENT_W - Inches(0.6), Inches(1.8),
+          "Ndotonic uses Gemini to elevate manuscripts before books go live: grammar, craft review, "
+          "covers, narration suggestions, and trust checks at publish time, with the author in control.",
+          size=15, color=TEXT)
+    surfaces = [
+        ("Ink Studio", "Six AI editing modes · collaborators · version history"),
+        ("Publishing", "Covers · ISBN · ebook · print · audiobook formats"),
+        ("GLC Media", "Content hub · podcasts · live radio and TV promotion"),
+    ]
+    sw = Inches(3.72)
+    for i, (title, body) in enumerate(surfaces):
+        left = MARGIN + i * (sw + Inches(0.37))
+        top = Inches(4.55)
+        deck._card(slide, left, top, sw, Inches(1.75), fill=RGBColor(0x0A, 0x0E, 0x0B))
+        _text(slide, left + Inches(0.25), top + Inches(0.25), sw - Inches(0.4), Inches(0.4),
+              title, size=14, bold=True, color=GOLD)
+        _text(slide, left + Inches(0.25), top + Inches(0.75), sw - Inches(0.4), Inches(0.8),
+              body, size=11, color=MUTED)
+
+
+def slide_hackathon_challenges(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "Challenges we ran into")
+    deck._title(slide, "Four fights to ship live", size=32)
+    challenges = [
+        ("1. GLC radio and TV on a modern web stack",
+         "ADK agents, Gemini, Cloud TTS, and audio assembly alongside Icecast for live radio "
+         "and HLS for live TV, wired through Docker Compose and nginx."),
+        ("2. Docker Compose vs serverless",
+         "Interdependent services need one compose graph. Docker Compose on a GCP VM kept them "
+         "starting, talking, and recovering together."),
+        ("3. Solopreneurship",
+         "Product, infrastructure, AI integration, deploys, business registration, marketing, "
+         "and hackathon materials on one person."),
+        ("4. Trust and compliance at publish time",
+         "Rights warranty, takedown consent, and AI attestation while policy catches up."),
+    ]
+    deck._card(slide, MARGIN, Inches(2.0), CONTENT_W, Inches(4.35), edge=GOLD_SOFT)
+    y = Inches(2.18)
+    for title, body in challenges:
+        _text(slide, MARGIN + Inches(0.3), y, Inches(11.2), Inches(0.35),
+              title, size=12, bold=True, color=GOLD)
+        _text(slide, MARGIN + Inches(0.3), y + Inches(0.38), Inches(11.2), Inches(0.55),
+              body, size=11, color=MUTED)
+        y += Inches(1.02)
+
+
+def slide_hackathon_proud(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "What we are proud of")
+    deck._title(slide, "Putting it all together", size=34)
+    deck._card(slide, MARGIN, Inches(2.05), CONTENT_W, Inches(2.35), edge=GOLD)
+    _text(slide, MARGIN + Inches(0.3), Inches(2.3), CONTENT_W - Inches(0.5), Inches(1.85),
+          "Ndotonic is live at ndotonic.com, not a prototype. Ink Studio, patron campaigns, "
+          "marketplace, six-mode AI editing, audiobook studio, Stripe payouts, publishing pipeline, "
+          "analytics, and GLC radio/TV promotion work as one author story.",
+          size=14, color=TEXT)
+    _text(slide, MARGIN, Inches(4.65), CONTENT_W, Inches(0.75),
+          "We turned what authors told us into product. AI lives inside the author workflow where "
+          "craft, production, and trust decisions actually happen.",
+          size=13, color=MUTED)
+    _text(slide, MARGIN, Inches(5.55), CONTENT_W, Inches(0.45),
+          "Mission: Uncover hidden potential and amplify unheard voices.",
+          size=15, bold=True, color=GOLD)
+
+
+def slide_hackathon_lessons(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "Lessons learnt")
+    deck._title(slide, "What building taught us", size=32)
+    _bullets(slide, [
+        "Orchestrating production agents (Gemini, ADK) takes detailed task descriptions and "
+        "multi-turn testing to evaluate consistency before anything ships.",
+        "Building solo means owning product, infra, AI, compliance, and go-to-market at once, "
+        "and shipping what validates the full journey first.",
+        "Every great platform starts with an idea, then turning it into something real; "
+        "winning your first users is the steepest climb, and where the story begins to matter.",
+    ], MARGIN, Inches(2.1), CONTENT_W, Inches(4.2), size=13, color=TEXT, gap=18, prefix="◆ ")
+
+
+def slide_hackathon_next(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "Next steps")
+    deck._title(slide, "Three-year roadmap", size=32)
+    years = [
+        ("Year 1", "Author acquisition · campaign GMV · workflow validation"),
+        ("Year 2", "GLC Media content · audio and print scale"),
+        ("Year 3", "Rights and adaptation pipeline"),
+    ]
+    yw = Inches(3.72)
+    for i, (label, detail) in enumerate(years):
+        left = MARGIN + i * (yw + Inches(0.37))
+        deck._card(slide, left, Inches(2.35), yw, Inches(2.4), fill=RGBColor(0x0A, 0x0E, 0x0B))
+        _text(slide, left + Inches(0.25), Inches(2.65), yw - Inches(0.4), Inches(0.45),
+              label, size=16, bold=True, color=GOLD)
+        _text(slide, left + Inches(0.25), Inches(3.25), yw - Inches(0.4), Inches(1.2),
+              detail, size=13, color=TEXT)
+
+
+def slide_hackathon_built_with(deck):
+    slide = deck.slide()
+    deck._kicker(slide, "Built with")
+    deck._title(slide, "Stack", size=34)
+    tags = [
+        "Python · Flask · PostgreSQL · Docker · GitHub Actions",
+        "GCP: Compute Engine · VPC · Cloud DNS · IAM · Cloud Text-to-Speech",
+        "Gemini API · Google ADK · google.generativeai",
+        "Icecast · Liquidsoap · Stripe · Flask-SocketIO",
+        "AI agents",
+    ]
+    y = Inches(2.05)
+    for tag in tags:
+        deck._card(slide, MARGIN, y, CONTENT_W, Inches(0.82), fill=RGBColor(0x10, 0x12, 0x10))
+        _text(slide, MARGIN + Inches(0.35), y + Inches(0.22), Inches(11), Inches(0.45),
+              tag, size=14, color=TEXT)
+        y += Inches(0.98)
+
+
+def build_hackathon_pptx():
+    deck = Deck()
+    slide_hackathon_title(deck)
+    slide_hackathon_inspiration(deck)
+    slide_hackathon_what(deck)
+    slide_hackathon_what_gemini(deck)
+    slide_hackathon_challenges(deck)
+    slide_hackathon_proud(deck)
+    slide_hackathon_lessons(deck)
+    slide_hackathon_next(deck)
+    slide_hackathon_built_with(deck)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out = OUT_DIR / "Ndotonic_Hackathon_Pitch.pptx"
     deck.prs.save(str(out))
     return out
 
 
 if __name__ == "__main__":
-    path = build_pptx()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "hackathon":
+        path = build_hackathon_pptx()
+    else:
+        path = build_pptx()
     print(f"Wrote {path}")

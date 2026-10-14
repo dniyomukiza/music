@@ -2,30 +2,98 @@ log.stdout := true
 
 # === Playlists and fallback setup ===
 default = single("/liqfolder/jinglemix.ogg")      # Fallback track
-day = playlist("/liqfolder/mixes.m3u")     # Day (6h–22h): mixes
-night = playlist("/liqfolder/ytauto.m3u")  # Night (22h–6h): downloads (ytauto)
-jingles = playlist("/liqfolder/jingles.m3u")      # Jingles playlist
-clock = single("/liqfolder/jinglemix.ogg")        # Clock jingle for top-of-hour
-gosp3 = playlist("/liqfolder/gosp3.m3u")
-satmix = playlist("/liqfolder/satmix.m3u")
-# === Time-based switching between day and night playlists ===
-radio = switch([
-  ({ 0w }, gosp3),
-  ({ 6w }, satmix),
-  ({ 7w }, satmix),
-  ({ 6h-22h }, day),    # Day: mixes.m3u
-  ({ 22h-6h }, night),  # Night: ytauto.m3u (downloads)
-  ({ true }, night)  
+# Rotate needs two plain playlists. A switch/fallback child is treated as one
+# continuous source, so jingles never get a turn.
+songs = playlist(id="eleven_songs", reload_mode="watch", mode="normal", "/liqfolder/eleven.m3u")
+jingles = fallback(track_sensitive=true, [
+  playlist(id="radio_jingles", reload_mode="watch", mode="normal", "/liqfolder/jingles.m3u"),
+  single("/liqfolder/jingle.mp3"),
+  single("/liqfolder/jinglemix.ogg")
 ])
-radio = fallback([radio, default])  # Fallback to default if playlists fail
+hour_jingle = single("/liqfolder/jinglemix.ogg")
+gosp3 = playlist("/liqfolder/eleven.m3u")
+satmix = playlist("/liqfolder/eleven.m3u")
+eleven = playlist("/liqfolder/eleven.m3u")
 
-# === Add jingles randomly (1 jingle every 2 songs) ===
-radio = random(weights=[1, 2], [jingles, radio])
+# Daily GLC News (raw MP3, request.dynamic only — never playlist/.m3u).
+# Container TZ is America/Los_Angeles. Windows: 11:00–11:30 AM and 6:00–6:30 PM Pacific.
+# The window predicate stays true for the whole half hour so the file has time to
+# start. The request function latches after one successful open, so the bulletin
+# does not loop, and the latch clears when that window ends. source once() and
+# predicate.once() are the wrong tools: once() never re-arms, and predicate.once()
+# is only true for the instant the clock ticks.
+# Fallible: if final_news_broadcast.mp3 is missing, the slot is skipped and songs stay on.
+news_path = "/liqfolder/glconnect/static/audio/final_news_broadcast.mp3"
+morning_started = ref(false)
+evening_started = ref(false)
 
-# === Add top-of-the-hour clock jingle ===
-radio = add([radio, switch([({ 0m0s }, clock)])])
+def in_morning() =
+  t = time.local()
+  t.hour == 11 and t.min < 30
+end
+
+def in_evening() =
+  t = time.local()
+  t.hour == 18 and t.min < 30
+end
+
+def morning_request() =
+  if morning_started() or not file.exists(news_path) then
+    request.create("")
+  else
+    morning_started := true
+    request.create(news_path)
+  end
+end
+
+def evening_request() =
+  if evening_started() or not file.exists(news_path) then
+    request.create("")
+  else
+    evening_started := true
+    request.create(news_path)
+  end
+end
+
+news_morning = request.dynamic(id="glc_news_morning", retry_delay=10., morning_request)
+news_evening = request.dynamic(id="glc_news_evening", retry_delay=10., evening_request)
+
+def rearm_news() =
+  if not in_morning() then
+    morning_started := false
+  end
+  if not in_evening() then
+    evening_started := false
+  end
+end
+
+thread.run(delay=0., every=5., rearm_news)
+
+# Song, then jingle, then song, then jingle.
+music = rotate(weights=[1, 1], [songs, jingles])
+music = fallback([music, default])
+
+# Top-of-hour jingle. Skipped at 11:00 and 6:00, when the bulletin starts.
+def play_clock() =
+  t = time.local()
+  t.min == 0 and t.sec < 2 and t.hour != 11 and t.hour != 18
+end
+
+music = add([music, switch([(play_clock, hour_jingle)])])
+
+# News windows (Pacific): 11:00–11:30 AM and 6:00–6:30 PM.
+# track_sensitive=false cuts the current song as soon as the bulletin is ready,
+# and the latch above stops a second play before the window closes.
+radio = fallback(track_sensitive=false, [
+  switch(track_sensitive=false, [
+    (in_morning, news_morning),
+    (in_evening, news_evening)
+  ]),
+  music
+])
 
 # === Make radio stream safe and create final fallback ===
+radio = fallback([radio, default])
 radio = mksafe(radio)
 
 # Uncomment this if you have a live input stream
@@ -63,4 +131,14 @@ output.icecast(%mp3,
   password="123",
   mount="satmix",
   sat_radio
+)
+
+# === ElevenLabs originals (standalone, not mixed into station day rotation) ===
+eleven_radio = mksafe(eleven)
+output.icecast(%mp3,
+  host="icecast2",
+  port=8000,
+  password="123",
+  mount="eleven",
+  eleven_radio
 )

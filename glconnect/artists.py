@@ -128,6 +128,15 @@ def upload_song():
     try:
         db.session.add(new_song)
         db.session.commit()
+        from glconnect.email_service import notify_song_upload
+        notify_song_upload(
+            artist_name=artist_name,
+            song_name=song_name,
+            local_path=os.path.join("/static/song_uploads", mp3_filename),
+            song_id=getattr(new_song, "id", None),
+            user_email=getattr(current_user, "email", "") or "",
+            username=getattr(current_user, "username", "") or "",
+        )
         flash("MP3 song uploaded successfully!", "success")
     except Exception as e:
         db.session.rollback()

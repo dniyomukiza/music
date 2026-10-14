@@ -9,7 +9,6 @@
 {% block salutation %}
 <div class="auth-page-shell">
     <div class="auth-card auth-card--register">
-        {% include 'messages.html' %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="auth-flashes">
@@ -62,7 +61,6 @@
                     <option value="artist">Artist</option>
                     <option value="author">Author</option>
                     <option value="blogger">Blogger</option>
-                    <option value="podcaster">Podcaster</option>
                     <option value="other">Other</option>
                 </select>
             </div>

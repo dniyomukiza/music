@@ -31,7 +31,7 @@ class RegistrationForm(FlaskForm):
     username = StringField(validators=[DataRequired()], render_kw={"placeholder": "Username"})
     password = StringField(validators=[DataRequired(), Length(min=2, max=20)], render_kw={"placeholder": "Password"})
     email = StringField('Email', validators=[DataRequired(), Email()], render_kw={"placeholder": "Email"})
-    role = SelectField('Role', choices=[('artist', 'Artist'), ('author', 'Author'), ('blogger', 'Blogger'), ('podcaster', 'Podcaster'), ('freelancer', 'Freelancer'), ('other', 'Other')], default='other')
+    role = SelectField('Role', choices=[('artist', 'Artist'), ('author', 'Author'), ('blogger', 'Blogger'), ('other', 'Other')], default='other')
     submit = SubmitField('Sign up')
     recap=RecaptchaField()
 
@@ -78,8 +78,12 @@ class CareerApplicationForm(FlaskForm):
     FirstName = StringField('First Name', validators=[DataRequired(), Length(max=50)])
     LastName = StringField('Last Name', validators=[DataRequired(), Length(max=50)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    portfolio_url = StringField('Portfolio or LinkedIn (optional)', validators=[Optional(), Length(max=300)])
-    message = TextAreaField('Cover letter / message', validators=[DataRequired(), Length(max=3000)])
+    phone = StringField(
+        'Phone number',
+        validators=[DataRequired(), Length(min=7, max=30)],
+        render_kw={'type': 'tel', 'autocomplete': 'tel', 'placeholder': '+1 555 123 4567'},
+    )
+    message = TextAreaField('Message', validators=[DataRequired(), Length(max=3000)])
     submit = SubmitField('Submit application')
     recap = RecaptchaField()
 
@@ -124,9 +128,13 @@ class PostForm(FlaskForm):
     submit=SubmitField('Post')
 
 class ResetRequestForm(FlaskForm):
-    email = StringField('Email', validators=[DataRequired(), Email()])
+    login = StringField(
+        'Username or email',
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Username or email"},
+    )
     submit = SubmitField('Request Password Reset')
-    recap=RecaptchaField()
+    recap = RecaptchaField()
 
 class PasswordResetForm(FlaskForm):
     password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
@@ -149,9 +157,9 @@ class DigitalBookUploadForm(FlaskForm):
     description = TextAreaField('Description', validators=[Optional()])
     genre = SelectField(
         'Category',
-        validators=[DataRequired(message='Select Real Life or Nonfiction.')],
+        validators=[DataRequired(message='Category is required.')],
         choices=INK_UPLOAD_GENRE_CHOICES,
-        default='',
+        default='nonfiction',
     )
     ebook_language = SelectField(
         'Original language of your ebook',
@@ -161,6 +169,7 @@ class DigitalBookUploadForm(FlaskForm):
     )
     digital_book_file = FileField('Digital Book File', validators=[
         Optional(),
+        FileSize(max_size_mb=500, message='The book file must be 500 MB or smaller.'),
         FileAllowed(
             ['epub', 'docx', 'txt', 'pdf'],
             'Use EPUB, DOCX, or TXT for the best in app reading experience. PDF is accepted for download but often does not reflow well in the browser reader.',
@@ -168,10 +177,11 @@ class DigitalBookUploadForm(FlaskForm):
     ])
     cover_image = FileField('Cover Image', validators=[
         Optional(),
+        FileSize(max_size_mb=10, message='The cover image must be 10 MB or smaller.'),
         FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'], 'Cover must be JPG, PNG, GIF, or WebP.')
     ])
     use_ai_cover = BooleanField('Generate cover with AI')
-    cover_art_brief = TextAreaField('Cover art direction (for AI)', validators=[Optional(), Length(max=2000)])
+    cover_art_brief = TextAreaField('Prompt AI', validators=[Optional(), Length(max=2000)])
 
     # Pricing
     digital_price = FloatField(
@@ -229,7 +239,7 @@ class InvestmentCampaignForm(FlaskForm):
     )
     tentative_timeline = StringField(
         'Tentative timeline',
-        validators=[Optional(), Length(max=200)],
+        validators=[DataRequired(), Length(max=200)],
         render_kw={"placeholder": "e.g., First draft by June 2026, marketplace launch Fall 2026"},
     )
     pitch_video_url = StringField('Pitch Video URL (Optional)', validators=[Optional(), Length(max=500)],

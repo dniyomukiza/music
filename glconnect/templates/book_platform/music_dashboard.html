@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0c0f0e">
     <meta name="color-scheme" content="dark">
-    <meta name="description" content="Ink Studio music dashboard, search, queue, and voice DJ.">
-    <title>Music Dashboard | Ink Studio</title>
+    <meta name="description" content="Play GLC Radio originals.">
+    <title>Music | Ink Studio</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
@@ -70,168 +70,369 @@
         </div>
     </nav>
 
-    <main id="ink-music-main" class="pb-5" tabindex="-1">
-    <div class="container py-4 py-md-5 px-3 px-md-4">
-        <header class="ink-music-hero mb-4 mb-lg-5">
-            <p class="ink-music-eyebrow mb-0">Ink Studio · Music</p>
-            <h1 class="ink-music-title">Artist dashboard</h1>
-            <p class="ink-music-lead">Search the catalog, build your queue, and use the voice agent to DJ hands free, optimized for focus and flow.</p>
-            <div class="ink-music-pills" role="list">
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-wave-square me-1" aria-hidden="true"></i>High fidelity stream</span>
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-list-ol me-1" aria-hidden="true"></i>Smart queue</span>
-                <span class="ink-music-pill" role="listitem"><i class="fas fa-microphone-alt me-1" aria-hidden="true"></i>Voice DJ</span>
-            </div>
-        </header>
-
-        {% if not has_artist_profile %}
-        <div class="row mb-4 mb-lg-5">
-            <div class="col-12">
-                {% if is_artist_account %}
-                <div class="card music-card ink-music-panel">
-                    <div class="card-header d-flex align-items-center gap-3 flex-wrap border-0 pb-0">
-                        <div class="ink-music-status-icon" aria-hidden="true"><i class="fas fa-star"></i></div>
-                        <div>
-                            <h2 class="h5 mb-1">Claim your stage</h2>
-                            <p class="text-muted small mb-0">Create your artist profile to upload tracks and reach listeners.</p>
-                        </div>
-                    </div>
-                    <div class="card-body pt-3">
-                        <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#createArtistModal">
-                            <i class="fas fa-user-plus me-2" aria-hidden="true"></i>Set up artist profile
-                        </button>
-                    </div>
-                </div>
-                {% else %}
-                <div class="card music-card ink-music-panel">
-                    <div class="card-header d-flex align-items-center gap-3 flex-wrap border-0 pb-0">
-                        <div class="ink-music-status-icon" aria-hidden="true"><i class="fas fa-lock"></i></div>
-                        <div>
-                            <h2 class="h5 mb-1">Upload access locked</h2>
-                            <p class="text-muted small mb-0">Listener accounts can browse and queue music. Register as an artist to distribute your own tracks.</p>
-                        </div>
-                    </div>
-                    <div class="card-body pt-3">
-                        <a href="{{ url_for('routes1.register') }}" class="btn btn-outline-light rounded-pill px-4">
-                            Switch to artist
-                        </a>
-                    </div>
-                </div>
+    <main id="ink-music-main" tabindex="-1">
+        <div class="container glc-listen">
+            <div class="glc-listen-head" id="searchMusicCard">
+                <form class="glc-search autocomplete-container" onsubmit="event.preventDefault(); searchMusic();">
+                    <label for="musicSearchInput" class="visually-hidden">Search artists or tracks</label>
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" id="musicSearchInput" placeholder="Search songs or artists" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
+                </form>
+                {% if has_artist_profile and is_artist_account %}
+                <button type="button" class="glc-release" data-bs-toggle="modal" data-bs-target="#uploadSongModal">Release a track</button>
+                {% elif is_artist_account %}
+                <button type="button" class="glc-release" data-bs-toggle="modal" data-bs-target="#createArtistModal">Artist profile</button>
                 {% endif %}
             </div>
-        </div>
-        {% else %}
-        <div class="row mb-4 mb-lg-5">
-            <div class="col-12">
-                <div class="card music-card ink-music-panel">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3 border-0 pb-0">
-                        <div class="d-flex align-items-center gap-3 flex-wrap">
-                            <span class="badge rounded-pill px-3 py-2" style="background: rgba(45, 106, 79, 0.35); color: #b8e0ce; border: 1px solid rgba(45, 106, 79, 0.5);"><i class="fas fa-check-circle me-1" aria-hidden="true"></i> Verified</span>
-                            <h2 class="h5 mb-0">{{ artist_profile.artist_name }}</h2>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <a href="{{ url_for('art.artist_profile', artist_id=artist_profile.artist_id) }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
-                                View profile
-                            </a>
-                            {% if is_artist_account %}
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#uploadSongModal">
-                                <i class="fas fa-upload me-1" aria-hidden="true"></i>Release track
-                            </button>
-                            {% endif %}
-                        </div>
-                    </div>
+            <div id="autocompleteSuggestions" class="autocomplete-suggestions" role="listbox" aria-label="Search suggestions"></div>
+            <div id="inkMusicResultsCol">
+                <div id="searchResultsContainer" class="glc-tracks" aria-live="polite">
+                    <p class="glc-tracks-status">Search for a song or an artist.</p>
                 </div>
             </div>
         </div>
-        {% endif %}
-
-        <div class="row mb-4 mb-lg-5" id="searchCardRow">
-            <div class="col-12">
-                <div class="card music-card" id="searchMusicCard">
-                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <h2 class="h5 mb-0"><i class="fas fa-search me-2" style="color: var(--primary-color);" aria-hidden="true"></i>Discover</h2>
-                        <span class="playlist-badge rounded-pill"><i class="fas fa-headphones me-1" aria-hidden="true"></i>{{ current_user.username if current_user.is_authenticated else 'Guest' }}</span>
-                    </div>
-                    <div class="card-body p-4" style="overflow: visible !important; position: relative;">
-                        <div class="row g-3 align-items-center" style="overflow: visible !important;">
-                            <div class="col-lg-10" style="position: relative; overflow: visible !important;">
-                                <div class="autocomplete-container" style="position: relative; z-index: 1;">
-                                    <label for="musicSearchInput" class="visually-hidden">Search artists or tracks</label>
-                                    <div class="input-group input-group-lg">
-                                        <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fas fa-search" aria-hidden="true"></i></span>
-                                        <input type="text" id="musicSearchInput" class="form-control border-start-0 ps-0" placeholder="Search artists or tracks…" autocomplete="off" onkeydown="handleSearchKeydown(event)" oninput="handleSearchInput()">
-                                        <button type="button" class="btn btn-primary px-4 ms-2 rounded-pill" onclick="searchMusic()">Search</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-2 text-lg-end">
-                                <button type="button" class="btn btn-outline-light btn-lg w-100 rounded-pill" onclick="loadPlaylist()">
-                                    <i class="fas fa-sync me-1" aria-hidden="true"></i>Sync queue
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="ink-music-voice-strip">
-                            <div class="d-flex align-items-center gap-3 flex-wrap">
-                                <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-2" id="voiceAgentBtn" onclick="startVoiceRecognition()" title="Speak to control playback">
-                                    <i class="fas fa-microphone-alt me-2" aria-hidden="true"></i>Virtual DJ
-                                </button>
-                                <button type="button" class="btn btn-link text-muted text-decoration-none btn-sm p-0" onclick="showVoiceTranscript()">
-                                    <i class="fas fa-stream me-1" aria-hidden="true"></i>Conversation log
-                                </button>
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-volume-down text-muted small" aria-hidden="true"></i>
-                                <input type="range" id="voiceVolumeSlider" class="form-range custom-range" min="0.01" max="1" step="0.01" value="0.15" style="width: 100px;" aria-label="Voice assistant volume">
-                                <span id="voiceVolumeLabel" class="text-muted small" style="min-width: 2.25rem;">15%</span>
-                            </div>
-                        </div>
-                        <input type="text" id="voiceAgentInput" class="d-none" aria-hidden="true">
-                        <div id="voiceAgentResponse" class="mt-2 text-center small text-white-50" style="min-height: 1.25rem;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="autocompleteSuggestions" class="autocomplete-suggestions" role="listbox" aria-label="Search suggestions"></div>
-
-        <div class="row g-4 g-lg-5">
-            <div class="col-lg-7" id="inkMusicResultsCol">
-                <h2 class="ink-music-section-title"><span class="ink-music-section-icon" aria-hidden="true"><i class="fas fa-compact-disc"></i></span>Browsing</h2>
-                <div class="card music-card bg-transparent border-0 shadow-none">
-                    <div class="card-body p-0">
-                        <div id="searchResultsContainer" class="row g-3">
-                            <div class="col-12 ink-music-empty">
-                                <div class="ink-music-empty-visual" aria-hidden="true">
-                                    <i class="fas fa-headphones-alt fa-2x text-muted"></i>
-                                </div>
-                                <h3 class="h6 text-light mb-2">Start exploring</h3>
-                                <p class="text-muted small mb-0">Type an artist or song to load results here.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-5">
-                <h2 class="ink-music-section-title"><span class="ink-music-section-icon" aria-hidden="true"><i class="fas fa-forward"></i></span>Up next</h2>
-                <div class="card music-card h-100">
-                    <div class="card-body" style="min-height: 400px; max-height: 600px; overflow-y: auto;">
-                        <div id="playlistContainer" class="playlist-container">
-                            <div class="text-center py-5">
-                                <i class="fas fa-spinner fa-spin text-muted me-2" aria-hidden="true"></i><span class="text-muted">Loading queue…</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
     </main>
+
+    <section class="glc-player" id="glcPlayer" aria-label="Now playing">
+        <div class="glc-player-now">
+            <div class="glc-player-art" id="glcPlayerArt" aria-hidden="true">♪</div>
+            <div class="glc-player-meta">
+                <p class="glc-player-title" id="glcPlayerTitle">GLC Radio</p>
+                <p class="glc-player-artist" id="glcPlayerArtist">Choose a song</p>
+            </div>
+        </div>
+        <div class="glc-player-transport">
+            <button type="button" class="glc-icon-btn" id="glcPrev" aria-label="Previous song"><i class="fas fa-step-backward" aria-hidden="true"></i></button>
+            <button type="button" class="glc-play-btn" id="glcPlay" aria-label="Play"><i class="fas fa-play" aria-hidden="true"></i></button>
+            <button type="button" class="glc-icon-btn" id="glcNext" aria-label="Next song"><i class="fas fa-step-forward" aria-hidden="true"></i></button>
+            <span class="glc-time" id="glcElapsed">0:00</span>
+            <input type="range" id="glcScrub" min="0" max="0" value="0" step="0.1" aria-label="Song position">
+            <span class="glc-time" id="glcDuration">0:00</span>
+        </div>
+        <div class="glc-player-side">
+            <label class="glc-volume">
+                <i class="fas fa-volume-up" aria-hidden="true"></i>
+                <input type="range" id="glcVolume" min="0" max="1" step="0.01" value="0.9" aria-label="Volume">
+            </label>
+            <button type="button" class="glc-next-toggle" id="glcNextToggle" aria-expanded="false" aria-controls="glcNextPanel">Playlist</button>
+        </div>
+    </section>
+    <div class="glc-next-panel" id="glcNextPanel" hidden>
+        <p class="glc-next-label">Playlist</p>
+        <div id="glcNextList"></div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const userId = {{ current_user.user_id if current_user.is_authenticated else 'null' }};
-        
+        const glcAudio = new Audio();
+        glcAudio.preload = 'none';
+        let glcQueue = [];
+        let glcResults = [];
+        let glcPlaylist = [];
+        let glcSource = 'results';
+        let glcIndex = -1;
+        let glcCurrent = null;
+        let glcScrubbing = false;
+        let glcSavedIds = new Set();
+
+        function glcEsc(value) {
+            return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+            });
+        }
+
+        function glcNormalize(song) {
+            if (!song || typeof song !== 'object') return null;
+            let name = String(song.name || '').trim();
+            let artist = String(song.artist || '').trim();
+            const byPattern = /^\s*by\s+(.+)$/i;
+            if (byPattern.test(name)) {
+                const extracted = name.match(byPattern)[1].trim();
+                if (!artist || artist === 'Unknown' || artist === 'Unknown Artist') artist = extracted;
+                name = '';
+            }
+            const path = song.path || (song.song_id != null && song.song_id !== '' ? `/playlist2/song/${song.song_id}/file` : '');
+            return {
+                song_id: song.song_id != null ? song.song_id : null,
+                download_id: song.download_id != null ? song.download_id : null,
+                name: name || 'Untitled Track',
+                artist: artist || 'GLC Radio',
+                path: path,
+                cover: song.cover_image || song.artist_profile_pic || ''
+            };
+        }
+
+        function glcClock(seconds) {
+            const total = Math.max(0, Math.floor(seconds || 0));
+            const mins = Math.floor(total / 60);
+            const secs = total % 60;
+            return mins + ':' + String(secs).padStart(2, '0');
+        }
+
+        function glcShowTracks(data, message) {
+            const container = document.getElementById('searchResultsContainer');
+            const savedHas = glcSavedIds && typeof glcSavedIds.has === 'function'
+                ? function (id) { return glcSavedIds.has(id); }
+                : function () { return false; };
+            try {
+                glcResults = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song && song.path; });
+                if (!glcResults.length) {
+                    container.innerHTML = '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
+                } else {
+                    container.innerHTML = glcResults.map(function (song, index) {
+                        const songId = Number(song.song_id);
+                        const saved = song.song_id != null && songId && savedHas(songId);
+                        const playlist = song.song_id != null
+                            ? '<button type="button" class="glc-save' + (saved ? ' is-saved' : '') + '" data-playlist="' + index + '" aria-label="' + glcEsc((saved ? 'Remove ' : 'Add ') + song.name + (saved ? ' from playlist' : ' to playlist')) + '"><i class="fas fa-' + (saved ? 'minus' : 'plus') + '" aria-hidden="true"></i></button>'
+                            : '';
+                        return '<div class="glc-track" data-index="' + index + '">' +
+                            '<button type="button" class="glc-track-play" data-play="' + index + '" aria-label="Play ' + glcEsc(song.name) + '"><i class="fas fa-play" aria-hidden="true"></i></button>' +
+                            '<button type="button" class="glc-track-copy" data-play="' + index + '">' +
+                            '<span class="glc-track-name">' + glcEsc(song.name) + '</span>' +
+                            '<span class="glc-track-artist">' + glcEsc(song.artist) + '</span>' +
+                            '</button>' + playlist + '</div>';
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Could not draw search results:', error);
+                if (!container) return;
+                const names = (Array.isArray(data) ? data : []).map(function (song) {
+                    return song && (song.name || song.filename);
+                }).filter(Boolean);
+                container.innerHTML = names.length
+                    ? names.map(function (name) { return '<p class="glc-tracks-status">' + glcEsc(name) + '</p>'; }).join('')
+                    : '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
+            }
+            try { glcMarkRow(); } catch (error) { console.error(error); }
+            try { glcRenderPlaylist(); } catch (error) { console.error(error); }
+        }
+
+        function glcMarkRow() {
+            document.querySelectorAll('.glc-track').forEach(function (row) {
+                const index = Number(row.getAttribute('data-index'));
+                const song = glcResults[index];
+                const on = !!(song && glcCurrent && song.path === glcCurrent.path && glcSource === 'results');
+                const playing = on && !glcAudio.paused && !glcAudio.ended;
+                row.classList.toggle('is-playing', on && !glcAudio.ended);
+                const icon = row.querySelector('.glc-track-play i');
+                const btn = row.querySelector('.glc-track-play');
+                if (icon) icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+                if (btn && song) btn.setAttribute('aria-label', (playing ? 'Pause ' : 'Play ') + song.name);
+            });
+        }
+
+        function glcRevealPlaylist() {
+            const panel = document.getElementById('glcNextPanel');
+            const toggle = document.getElementById('glcNextToggle');
+            if (panel) panel.removeAttribute('hidden');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        }
+
+        function glcRenderPlaylist() {
+            const list = document.getElementById('glcNextList');
+            if (!list) return;
+            if (!userId) {
+                list.innerHTML = '<p class="glc-next-empty">Log in to keep a playlist.</p>';
+                return;
+            }
+            if (!glcPlaylist.length) {
+                list.innerHTML = '<p class="glc-next-empty">Nothing saved yet.</p>';
+                return;
+            }
+            list.innerHTML = glcPlaylist.map(function (song, index) {
+                if (!song) return '';
+                const on = glcSource === 'playlist' && glcCurrent && song.path === glcCurrent.path;
+                return '<div class="glc-next-row' + (on ? ' is-playing' : '') + '">' +
+                    '<button type="button" class="glc-next-item" data-play-saved="' + index + '">' +
+                    '<span>' + glcEsc(song.name) + '</span><small>' + glcEsc(song.artist) + '</small></button>' +
+                    '<button type="button" class="glc-pl-remove" data-remove-saved="' + index + '" aria-label="' + glcEsc('Remove ' + song.name + ' from playlist') + '"><i class="fas fa-minus" aria-hidden="true"></i></button>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function glcSyncPlaylistQueue() {
+            if (glcSource !== 'playlist') return;
+            const path = glcCurrent && glcCurrent.path;
+            glcQueue = glcPlaylist.slice();
+            glcIndex = glcQueue.findIndex(function (song) { return song.path === path; });
+        }
+
+        function glcUpdateBar() {
+            const song = glcCurrent;
+            const title = document.getElementById('glcPlayerTitle');
+            const artist = document.getElementById('glcPlayerArtist');
+            const art = document.getElementById('glcPlayerArt');
+            const playBtn = document.getElementById('glcPlay');
+            if (!song) {
+                title.textContent = 'GLC Radio';
+                artist.textContent = 'Choose a song';
+                art.textContent = '♪';
+            } else {
+                title.textContent = song.name;
+                artist.textContent = song.artist;
+                art.textContent = (song.name || 'G').trim().charAt(0).toUpperCase();
+            }
+            const icon = playBtn.querySelector('i');
+            const playing = song && !glcAudio.paused && !glcAudio.ended;
+            icon.className = playing ? 'fas fa-pause' : 'fas fa-play';
+            playBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+            glcMarkRow();
+            glcRenderPlaylist();
+        }
+
+        function glcPlayList(list, index, source) {
+            const song = list[index];
+            if (!song) return;
+            if (glcCurrent && glcCurrent.path === song.path && glcSource === source && glcAudio.src) {
+                glcQueue = list.slice();
+                glcIndex = index;
+                if (glcAudio.paused) glcAudio.play();
+                else glcAudio.pause();
+                glcUpdateBar();
+                return;
+            }
+            glcSource = source;
+            glcQueue = list.slice();
+            glcPlayIndex(index, true);
+        }
+
+        function glcPlayIndex(index, force) {
+            if (index < 0 || index >= glcQueue.length) return;
+            const song = glcQueue[index];
+            if (!force && glcCurrent && glcCurrent.path === song.path && glcAudio.src) {
+                if (glcAudio.paused) glcAudio.play();
+                else glcAudio.pause();
+                glcUpdateBar();
+                return;
+            }
+            glcIndex = index;
+            glcCurrent = song;
+            glcAudio.src = song.path;
+            glcAudio.play().catch(function () {});
+            glcUpdateBar();
+        }
+
+        function glcLoadSaved() {
+            glcRenderPlaylist();
+            if (!userId) return;
+            fetch('/playlist2/view_playlist')
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    glcPlaylist = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song.path; });
+                    glcSavedIds = new Set(glcPlaylist.map(function (song) { return Number(song.song_id); }).filter(function (id) { return id; }));
+                    if (glcPlaylist.length) glcRevealPlaylist();
+                    if (glcResults.length) glcShowTracks(glcResults);
+                    else glcRenderPlaylist();
+                })
+                .catch(function () {});
+        }
+
+        function glcApplyPlaylistChange(song, saved) {
+            const songId = Number(song.song_id);
+            if (saved) {
+                glcSavedIds.delete(songId);
+                glcPlaylist = glcPlaylist.filter(function (item) { return Number(item.song_id) !== songId; });
+            } else if (!glcSavedIds.has(songId)) {
+                glcSavedIds.add(songId);
+                glcPlaylist.push(song);
+                glcRevealPlaylist();
+            }
+            glcSyncPlaylistQueue();
+            if (glcResults.length) glcShowTracks(glcResults);
+            else glcRenderPlaylist();
+            glcUpdateBar();
+        }
+
+        function glcTogglePlaylistSong(song, button) {
+            if (!song || song.song_id == null) return;
+            if (!userId) {
+                alert('Please log in to manage your playlist.');
+                return;
+            }
+            const songId = Number(song.song_id);
+            const saved = glcSavedIds.has(songId);
+            if (button) button.disabled = true;
+            fetch(saved ? '/playlist2/remove_song' : '/playlist2/add_to_playlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(saved ? { song_id: songId } : { user_id: userId, song_id: songId })
+            })
+            .then(function (response) { return response.json(); })
+            .then(function (data) {
+                if (data.status === 'success') {
+                    glcApplyPlaylistChange(song, saved);
+                } else {
+                    alert(data.message || 'Could not update your playlist.');
+                    if (button) button.disabled = false;
+                }
+            })
+            .catch(function () {
+                alert('Could not update your playlist.');
+                if (button) button.disabled = false;
+            });
+        }
+
+        function glcTogglePlaylist(index, button) {
+            glcTogglePlaylistSong(glcResults[index], button);
+        }
+
+        document.getElementById('searchResultsContainer').addEventListener('click', function (event) {
+            const play = event.target.closest('[data-play]');
+            const playlist = event.target.closest('[data-playlist]');
+            if (playlist) glcTogglePlaylist(Number(playlist.getAttribute('data-playlist')), playlist);
+            else if (play) glcPlayList(glcResults, Number(play.getAttribute('data-play')), 'results');
+        });
+        document.getElementById('glcNextList').addEventListener('click', function (event) {
+            const play = event.target.closest('[data-play-saved]');
+            const remove = event.target.closest('[data-remove-saved]');
+            if (remove) {
+                const index = Number(remove.getAttribute('data-remove-saved'));
+                const song = glcPlaylist[index];
+                if (song) glcTogglePlaylistSong(song, remove);
+            } else if (play) {
+                glcPlayList(glcPlaylist, Number(play.getAttribute('data-play-saved')), 'playlist');
+            }
+        });
+        document.getElementById('glcPlay').addEventListener('click', function () {
+            if (!glcCurrent && glcPlaylist.length) glcPlayList(glcPlaylist, 0, 'playlist');
+            else if (glcAudio.paused) glcAudio.play();
+            else glcAudio.pause();
+        });
+        document.getElementById('glcPrev').addEventListener('click', function () {
+            if (glcAudio.currentTime > 3) glcAudio.currentTime = 0;
+            else glcPlayIndex(glcIndex - 1);
+        });
+        document.getElementById('glcNext').addEventListener('click', function () { glcPlayIndex(glcIndex + 1); });
+        document.getElementById('glcVolume').addEventListener('input', function () { glcAudio.volume = Number(this.value); });
+        document.getElementById('glcNextToggle').addEventListener('click', function () {
+            const panel = document.getElementById('glcNextPanel');
+            const open = panel.hasAttribute('hidden');
+            if (open) panel.removeAttribute('hidden');
+            else panel.setAttribute('hidden', '');
+            this.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        document.getElementById('glcScrub').addEventListener('input', function () { glcScrubbing = true; });
+        document.getElementById('glcScrub').addEventListener('change', function () {
+            glcAudio.currentTime = Number(this.value);
+            glcScrubbing = false;
+        });
+        glcAudio.volume = 0.9;
+        glcAudio.addEventListener('play', glcUpdateBar);
+        glcAudio.addEventListener('pause', glcUpdateBar);
+        glcAudio.addEventListener('ended', function () {
+            if (glcIndex + 1 < glcQueue.length) glcPlayIndex(glcIndex + 1);
+            else glcUpdateBar();
+        });
+        glcAudio.addEventListener('timeupdate', function () {
+            if (glcScrubbing) return;
+            const scrub = document.getElementById('glcScrub');
+            scrub.max = glcAudio.duration || 0;
+            scrub.value = glcAudio.currentTime || 0;
+            document.getElementById('glcElapsed').textContent = glcClock(glcAudio.currentTime);
+            document.getElementById('glcDuration').textContent = glcClock(glcAudio.duration);
+        });
+
         // Playlist continuous playback state
         let playlistSongs = [];
         let currentPlayingIndex = -1;
@@ -418,14 +619,12 @@
             
             // Display artists first
             if (artists.length > 0) {
-                artists.forEach((artist, index) => {
-                    const artistId = artist.id || '';
-                    const artistName = artist.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                artists.forEach((artist) => {
                     html += `
-                        <div class="suggestion-item" data-type="artist" data-artist-id="${artistId}" data-artist-name="${artistName}" data-value="${artistName}" onclick="selectArtistSuggestion(${artistId}, '${artistName}')">
+                        <div class="suggestion-item" role="option" data-type="artist" data-artist-name="${glcEsc(artist.name)}">
                             <i class="fas fa-user suggestion-icon"></i>
                             <div class="suggestion-content">
-                                <div class="suggestion-name">${artist.name}</div>
+                                <div class="suggestion-name">${glcEsc(artist.name)}</div>
                                 <div class="suggestion-artist">Artist</div>
                             </div>
                             <span class="suggestion-type">Artist</span>
@@ -436,16 +635,13 @@
             
             // Display songs
             if (songs.length > 0) {
-                songs.forEach((song, index) => {
-                    const songId = song.id || '';
-                    const songName = song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    const songArtist = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                songs.forEach((song) => {
                     html += `
-                        <div class="suggestion-item" data-type="song" data-song-id="${songId}" data-song-name="${songName}" data-song-artist="${songArtist}" data-value="${songName} by ${songArtist}" onclick="selectSongSuggestion('${songName} by ${songArtist}')">
+                        <div class="suggestion-item" role="option" data-type="song" data-song-name="${glcEsc(song.name)}">
                             <i class="fas fa-music suggestion-icon"></i>
                             <div class="suggestion-content">
-                                <div class="suggestion-name">${song.name}</div>
-                                <div class="suggestion-artist">by ${song.artist}</div>
+                                <div class="suggestion-name">${glcEsc(song.name)}</div>
+                                <div class="suggestion-artist">by ${glcEsc(song.artist)}</div>
                             </div>
                             <span class="suggestion-type">Song</span>
                         </div>
@@ -454,6 +650,16 @@
             }
             
             suggestionsContainer.innerHTML = html;
+            suggestionsContainer.querySelectorAll('[data-type="artist"]').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    selectArtistSuggestion(null, item.getAttribute('data-artist-name'));
+                });
+            });
+            suggestionsContainer.querySelectorAll('[data-type="song"]').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    selectSongSuggestion(item.getAttribute('data-song-name'));
+                });
+            });
             
             // Ensure container is visible before adding show class
             suggestionsContainer.style.display = 'block';
@@ -484,6 +690,7 @@
             
             if (!suggestionsContainer.classList.contains('show') || suggestions.length === 0) {
                 if (event.key === 'Enter') {
+                    event.preventDefault();
                     searchMusic();
                 }
                 return;
@@ -506,12 +713,9 @@
                         const selected = suggestions[selectedSuggestionIndex];
                         const type = selected.getAttribute('data-type');
                         if (type === 'artist') {
-                            const artistId = selected.getAttribute('data-artist-id');
-                            const artistName = selected.getAttribute('data-artist-name');
-                            selectArtistSuggestion(parseInt(artistId), artistName);
+                            selectArtistSuggestion(null, selected.getAttribute('data-artist-name'));
                         } else {
-                            const songValue = selected.getAttribute('data-value');
-                            selectSongSuggestion(songValue);
+                            selectSongSuggestion(selected.getAttribute('data-song-name'));
                         }
                     } else {
                         searchMusic();
@@ -546,57 +750,18 @@
             suggestionsContainer.innerHTML = '';
             selectedSuggestionIndex = -1;
             
-            // Fetch all songs by this artist including collaborations
+            const name = (artistName || '').trim();
             const resultsContainer = document.getElementById('searchResultsContainer');
-            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Loading songs...</div>';
-            
-            const url = artistId 
-                ? `/playlist2/artist-songs?artist_id=${artistId}`
-                : `/playlist2/artist-songs?artist_name=${encodeURIComponent(artistName)}`;
-            
-            fetch(url)
+            resultsContainer.innerHTML = '<p class="glc-tracks-status">Searching…</p>';
+
+            fetch('/playlist2/artist-songs?artist_name=' + encodeURIComponent(name))
                 .then(response => response.json())
                 .then(data => {
-                    if (Array.isArray(data) && data.length) {
-                        // Get artist profile picture from first song (if available)
-                        const artistProfilePic = data[0]?.artist_profile_pic;
-                        const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
-                        
-                        let html = `
-                            <div class="col-12 mb-3">
-                                <div class="alert alert-info d-flex align-items-center gap-3">
-                                    ${imageUrl ? `<img src="${imageUrl}" alt="${artistName}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
-                                    <div>
-                                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistName}</strong></h6>
-                                        <small>Found ${data.length} song${data.length !== 1 ? 's' : ''} (including collaborations)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        
-                        data.forEach(song => {
-                            html += createSongCard(song, true);
-                        });
-                        
-                        resultsContainer.innerHTML = html;
-                    } else {
-                        resultsContainer.innerHTML = `
-                            <div class="col-12 text-center py-5">
-                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
-                                <p class="text-muted">No songs found for "${artistName}"</p>
-                            </div>
-                        `;
-                    }
+                    glcShowTracks(data, 'No songs found for ' + name);
                 })
                 .catch(error => {
                     console.error('Error fetching artist songs:', error);
-                    resultsContainer.innerHTML = `
-                        <div class="col-12">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-1"></i>Error loading songs. Please try again.
-                            </div>
-                        </div>
-                    `;
+                    glcShowTracks([], 'Songs by this artist could not be loaded.');
                 });
         }
         
@@ -604,11 +769,13 @@
         function selectSongSuggestion(songValue) {
             const input = document.getElementById('musicSearchInput');
             const suggestionsContainer = document.getElementById('autocompleteSuggestions');
-            input.value = songValue;
+            let value = String(songValue || '').trim();
+            const byParts = value.split(/\s+by\s+/i);
+            if (byParts.length >= 2 && byParts[0].trim()) value = byParts[0].trim();
+            input.value = value;
             suggestionsContainer.classList.remove('show');
             suggestionsContainer.innerHTML = '';
             selectedSuggestionIndex = -1;
-            // Perform normal search for the song immediately (no delay, no button click needed)
             searchMusic();
         }
         
@@ -643,7 +810,7 @@
 
         function createSongCard(song, includeActions = true) {
             // Use path from API (handles both artist songs and downloads); fallback for song_id only
-            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/static/afro/${encodeURIComponent(song.artist || 'Unknown')} - ${encodeURIComponent(song.name || 'track')}.mp3`);
+            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/playlist2/eleven/${encodeURIComponent((song.artist || 'GLC Radio') + ' - ' + (song.name || 'track') + '.mp3')}`);
             
             // Clean and extract song name and artist
             let rawSongName = (song.name && song.name.trim()) ? song.name.trim() : '';
@@ -698,104 +865,74 @@
             `;
         }
 
+        let glcSearchToken = 0;
+
+        function glcSearchQueries(query) {
+            const queries = [query];
+            const byParts = query.split(/\s+by\s+/i);
+            const title = (byParts[0] || '').trim();
+            if (byParts.length >= 2 && title && title.toLowerCase() !== query.toLowerCase()) queries.push(title);
+            return queries;
+        }
+
+        function glcFetchSongList(query) {
+            return fetch('/playlist2/playlist2?q=' + encodeURIComponent(query))
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Search failed (' + response.status + ')');
+                    return response.text();
+                })
+                .then(function (text) {
+                    const body = String(text || '').replace(/^\uFEFF/, '').trim();
+                    const data = body ? JSON.parse(body) : [];
+                    if (data && !Array.isArray(data) && data.redirect) return { redirect: data.redirect, rows: [] };
+                    return { redirect: '', rows: Array.isArray(data) ? data : [] };
+                });
+        }
+
         function searchMusic() {
             const query = document.getElementById('musicSearchInput').value.trim();
             const resultsContainer = document.getElementById('searchResultsContainer');
 
             if (!query) {
-                resultsContainer.innerHTML = `
-                    <div class="col-12 text-center text-muted py-5">
-                        <i class="fas fa-search fa-3x mb-3 d-block"></i>
-                        <p>Search for an artist or song to get started</p>
-                        <small class="text-muted">Enter an artist name to see all their songs, or search for a specific song</small>
-                    </div>
-                `;
+                resultsContainer.innerHTML = '<p class="glc-tracks-status">Search for a song or an artist.</p>';
                 return;
             }
 
-            resultsContainer.innerHTML = '<div class="col-12 text-center py-5"><i class="fas fa-spinner fa-spin fa-2x me-2"></i>Searching...</div>';
+            const token = ++glcSearchToken;
+            const queries = glcSearchQueries(query);
+            resultsContainer.innerHTML = '<p class="glc-tracks-status">Searching…</p>';
 
-            fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.redirect) {
-                        window.location.href = data.redirect;
+            const finish = function (rows) {
+                if (token !== glcSearchToken) return;
+                glcShowTracks(rows, 'No songs found for ' + query);
+            };
+
+            const attempt = function (index, retry) {
+                return glcFetchSongList(queries[index]).then(function (result) {
+                    if (token !== glcSearchToken) return;
+                    if (result.redirect) {
+                        window.location.href = result.redirect;
                         return;
                     }
-
-                    if (Array.isArray(data) && data.length) {
-                        // Group songs by artist for better display
-                        const artistGroups = {};
-                        data.forEach(song => {
-                            const artist = song.artist || 'Unknown Artist';
-                            if (!artistGroups[artist]) {
-                                artistGroups[artist] = [];
-                            }
-                            artistGroups[artist].push(song);
-                        });
-                        
-                        let html = '';
-                        
-                        // If only one artist, show header with artist picture
-                        const artistNames = Object.keys(artistGroups);
-                        if (artistNames.length === 1) {
-                            // Get artist profile picture from first song (if available)
-                            const artistProfilePic = data[0]?.artist_profile_pic;
-                            const imageUrl = artistProfilePic ? `/static/${artistProfilePic}` : null;
-                            
-                            html += `
-                                <div class="col-12 mb-3">
-                                    <div class="alert alert-info d-flex align-items-center gap-3">
-                                        ${imageUrl ? `<img src="${imageUrl}" alt="${artistNames[0]}" class="rounded" style="width: 60px; height: 60px; object-fit: cover; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
-                                        <div>
-                                            <h6 class="mb-0"><i class="fas fa-user me-2"></i>Artist: <strong>${artistNames[0]}</strong></h6>
-                                            <small>Found ${data.length} song${data.length !== 1 ? 's' : ''}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        } else if (artistNames.length > 1) {
-                            html += `
-                                <div class="col-12 mb-3">
-                                    <div class="alert alert-success">
-                                        <h6 class="mb-0"><i class="fas fa-music me-2"></i>Found ${data.length} song${data.length !== 1 ? 's' : ''} from ${artistNames.length} artist${artistNames.length !== 1 ? 's' : ''}</h6>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        // Display all songs with add to playlist buttons
-                        // If multiple artists, show artist picture with each song
-                        data.forEach(song => {
-                            html += createSongCard(song, true); // Always include actions (add to playlist)
-                        });
-                        
-                        resultsContainer.innerHTML = html;
-                    } else {
-                        resultsContainer.innerHTML = `
-                            <div class="col-12 text-center py-5">
-                                <i class="fas fa-search fa-3x mb-3 d-block text-muted"></i>
-                                <p class="text-muted">No songs found for "${query}"</p>
-                                <small class="text-muted">Try searching for a different artist or song name</small>
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
+                    if (!result.rows.length && index + 1 < queries.length) return attempt(index + 1, 0);
+                    finish(result.rows);
+                }).catch(function (error) {
+                    if (token !== glcSearchToken) return;
+                    if (!retry) return attempt(index, true);
+                    if (index + 1 < queries.length) return attempt(index + 1, 0);
                     console.error('Search error:', error);
-                    resultsContainer.innerHTML = `
-                        <div class="col-12">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-1"></i>Error searching songs. Please try again.
-                            </div>
-                        </div>
-                    `;
+                    glcResults = [];
+                    resultsContainer.innerHTML = '<p class="glc-tracks-status">Search could not be completed. Try again.</p>';
                 });
+            };
+
+            attempt(0, false);
         }
 
 
         function loadPlaylist() {
             const container = document.getElementById('playlistContainer');
+            if (!container) return Promise.resolve();
             if (!userId) {
                 container.innerHTML = '<p class="text-muted text-center">Login to view your playlist.</p>';
                 return Promise.resolve();
@@ -831,7 +968,7 @@
                             
                             const songName = rawSongName || 'Untitled Track';
                             const artistName = rawArtistName || 'Unknown Artist';
-                            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/static/afro/${encodeURIComponent(artistName)} - ${encodeURIComponent(songName)}.mp3`);
+                            const songPath = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : `/playlist2/eleven/${encodeURIComponent(artistName + ' - ' + songName + '.mp3')}`);
                             
                             return {
                                 id: song.id,
@@ -882,25 +1019,6 @@
                 });
         }
 
-        function findPlaylistAudioForAction(a) {
-            if (!a.url) return null;
-            const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
-            const pathPart = playUrl.replace(window.location.origin, '') || playUrl;
-            let audioEl = null;
-            if (a.song_id != null || a.download_id != null) {
-                const sel = a.song_id != null ? `[data-song-id="${a.song_id}"]` : `[data-download-id="${a.download_id}"]`;
-                const card = document.querySelector('.playlist-song-card' + sel);
-                if (card) audioEl = card.querySelector('.playlist-audio');
-            }
-            if (!audioEl) {
-                document.querySelectorAll('.playlist-audio, .song-audio').forEach(el => {
-                    const s = el.querySelector('source');
-                    if (s && s.src && (s.src === playUrl || s.src.endsWith(pathPart) || (pathPart && s.src.includes(pathPart)))) audioEl = el;
-                });
-            }
-            return audioEl;
-        }
-        
         function setupPlaylistPlayback() {
             // Set up event listeners for all playlist audio elements
             const audioElements = document.querySelectorAll('.playlist-audio');
@@ -1034,294 +1152,6 @@
                 button.innerHTML = original;
                 button.disabled = false;
             });
-        }
-
-        // Voice Agent - Gemini Live only (no fallback)
-        let voiceAgentActive = false;
-        let voiceAgentUserStopped = false;
-        let voiceLiveWs = null;
-        let voiceLiveMode = false;
-        let voiceLiveTried = false;
-        let voiceLivePlayerNode = null;
-        let voiceLiveMicStream = null;
-        const VOICE_WS_USER = (userId !== null && userId !== undefined) ? String(userId) : '0';
-        const VOICE_WS_TOKEN = {{ (music_live_ws_token(current_user.user_id) if current_user.is_authenticated else '') | tojson }};
-        let voiceWsSessionId = 'music-' + Math.random().toString(36).substring(7);
-
-        let voiceTranscriptLog = [];
-        let voiceVolumeGain = 0.15;
-        function isInternalReasoning(t) {
-            const s = (t || '').trim();
-            return /^\*\*[^*]+\*\*/.test(s) || /^I've (determined|registered|zeroed in)/i.test(s);
-        }
-        function addAgentTranscript(t) {
-            const text = (t || '').trim().replace(/\n/g, ' ');
-            if (!text || isInternalReasoning(text)) return;
-            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
-            if (last && last.role === 'Agent') {
-                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
-                    last.text = text;
-                    return;
-                }
-                if (last.text.startsWith(text) || last.text === text) return;
-            }
-            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
-                voiceTranscriptLog.push({ role: 'Agent', text: text });
-            }
-        }
-        function addUserTranscript(t) {
-            const text = (t || '').trim().replace(/\n/g, ' ');
-            if (!text) return;
-            const last = voiceTranscriptLog[voiceTranscriptLog.length - 1];
-            if (last && last.role === 'You') {
-                if (text.startsWith(last.text) || (last.text.length < text.length && text.includes(last.text))) {
-                    last.text = text;
-                    return;
-                }
-                if (last.text.startsWith(text) || last.text === text) return;
-            }
-            if (!voiceTranscriptLog.length || voiceTranscriptLog[voiceTranscriptLog.length - 1].text !== text) {
-                voiceTranscriptLog.push({ role: 'You', text: text });
-            }
-        }
-        let voiceLiveGainNode = null;
-        function getVoiceVolume() { return voiceVolumeGain; }
-        function showTapToPlayFallback(url, label) {
-            const respEl = document.getElementById('voiceAgentResponse');
-            respEl.querySelectorAll('.voice-tap-to-play').forEach(b => b.remove());
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-success btn-sm mt-1 voice-tap-to-play';
-            btn.innerHTML = '<i class="fas fa-play me-1"></i>Tap to play: ' + (label || 'Song');
-            btn.onclick = () => {
-                const a = new Audio(url);
-                a.volume = voiceVolumeGain;
-                a.play().catch(() => {});
-                btn.remove();
-            };
-            respEl.appendChild(btn);
-        }
-        function executeVoiceAction(a, retried) {
-             if (a.type === 'play' && a.url) {
-                 if (typeof console !== 'undefined') console.log('[Voice] Play action:', a.name, 'song_id:', a.song_id, 'download_id:', a.download_id, retried ? '(retry)' : '');
-                 const playUrl = a.url.startsWith('/') ? (window.location.origin + a.url) : a.url;
-
-                 // Try to find in UI first
-                 let audioEl = findPlaylistAudioForAction(a);
-
-                 if (audioEl) {
-                     if (typeof console !== 'undefined') console.log('[Voice] Playing via existing playlist element');
-                     audioEl.volume = voiceVolumeGain;
-                     audioEl.play().catch(e => {
-                         console.warn('Play failed (playlist):', e);
-                         showTapToPlayFallback(playUrl, a.name || 'Song');
-                     });
-                 } else if (!retried) {
-                     // If not found, refresh playlist and try again after a delay for DOM rendering
-                     if (typeof console !== 'undefined') console.log('[Voice] Song not in UI, refreshing playlist...');
-                     loadPlaylist().then(() => {
-                         setTimeout(() => executeVoiceAction(a, true), 800);
-                     });
-                 } else {
-                     if (typeof console !== 'undefined') console.log('[Voice] Still no playlist match, using new Audio');
-                     const audio = new Audio(playUrl);
-                     audio.volume = voiceVolumeGain;
-                     audio.play().catch(e => {
-                         console.warn('Play failed:', e);
-                         showTapToPlayFallback(playUrl, a.name || 'Song');
-                     });
-                 }
-             } else if (a.type === 'add_to_playlist' || a.type === 'remove_from_playlist') {
-                 loadPlaylist();
-                 if (a.type === 'add_to_playlist') {
-                     // Optional: Pulse the playlist title or show a temporary notification
-                     const title = document.querySelector('.playlist-section h4');
-                     if (title) {
-                         title.classList.add('text-success');
-                         setTimeout(() => title.classList.remove('text-success'), 2000);
-                     }
-                 }
-             } else if (a.type === 'search_results' && Array.isArray(a.songs)) {
-                 // Professional move: Update the search results UI with agent results
-                 renderAgentSearchResults(a.songs);
-             } else if (a.type === 'show_transcript') {
-                 showVoiceTranscript();
-             } else if (a.type === 'download' && a.url) {
-                 const aEl = document.createElement('a');
-                 aEl.href = a.url;
-                 aEl.download = (a.filename || 'song.mp3').replace(/[^a-zA-Z0-9._-]/g, '_');
-                 aEl.click();
-             }
-        }
-
-        function renderAgentSearchResults(songs) {
-            const container = document.getElementById('searchResults');
-            if (!container) return;
-            
-            // Clear current results and show new ones
-            container.innerHTML = '';
-            
-            if (!songs || songs.length === 0) {
-                container.innerHTML = '<div class="col-12"><p class="text-center text-muted">No songs found for that search.</p></div>';
-                return;
-            }
-            
-            let html = '';
-            songs.forEach(song => {
-                const sId = song.song_id || 'null';
-                const dId = song.download_id || 'null';
-                const sNameSafe = song.name.replace(/'/g, "\\'");
-                html += `
-                    <div class="col-md-6 col-lg-4 mb-4 fade-in">
-                        <div class="card h-100 song-card shadow-sm border-0">
-                            <img src="${song.cover_image || '/static/uploads/default_cover.jpg'}" class="card-img-top song-cover" alt="${song.name}" loading="lazy">
-                            <div class="card-body">
-                                <h5 class="card-title text-truncate">${song.name}</h5>
-                                <p class="card-text text-muted text-truncate">${song.artist}</p>
-                                <div class="d-flex gap-2">
-                                    <button class="btn btn-primary btn-sm flex-grow-1" onclick="playSong(${sId}, ${dId}, '${sNameSafe}', this)">
-                                        <i class="fas fa-play me-1"></i>Play
-                                    </button>
-                                    <button class="btn btn-outline-primary btn-sm" onclick="addSongToPlaylist(${sId}, ${dId}, '${sNameSafe}', this)">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-            // Scroll to search results smoothly
-            container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        // Global audio contexts for reuse and easier mobile unlocking
-        let recorderCtx = null;
-        let playerCtx = null;
-
-        async function unlockAudioContexts() {
-            if (recorderCtx && recorderCtx.state === 'suspended') await recorderCtx.resume();
-            if (playerCtx && playerCtx.state === 'suspended') await playerCtx.resume();
-        }
-
-        async function tryStartVoiceLive() {
-            const btn = document.getElementById('voiceAgentBtn');
-            const respEl = document.getElementById('voiceAgentResponse');
-
-            // Mobile Autoplay Fix: Contexts MUST be created or resumed on a user gesture
-            try {
-                if (!recorderCtx) recorderCtx = new AudioContext({ sampleRate: 16000 });
-                if (!playerCtx) playerCtx = new AudioContext({ sampleRate: 24000 });
-                await unlockAudioContexts();
-            } catch (err) {
-                console.error('AudioContext initialization failed:', err);
-            }
-
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            let wsUrl = wsProtocol + '//' + window.location.host + '/ws/music/' + VOICE_WS_USER + '/' + voiceWsSessionId;
-            if (VOICE_WS_TOKEN) wsUrl += '?token=' + encodeURIComponent(VOICE_WS_TOKEN);
-
-            try {
-                voiceLiveWs = new WebSocket(wsUrl);
-                await new Promise((resolve, reject) => {
-                    const t = setTimeout(() => reject(new Error('Connection timeout (8s). Check if FastAPI is running.')), 8000);
-                    let rejected = false;
-                    const fail = (msg) => { if (!rejected) { rejected = true; clearTimeout(t); reject(new Error(msg)); } };
-                    voiceLiveWs.onopen = () => { clearTimeout(t); resolve(); };
-                    voiceLiveWs.onerror = () => fail('WebSocket connection failed'); 
-                    voiceLiveWs.onclose = (e) => {
-                        if (!rejected && voiceLiveWs.readyState !== WebSocket.OPEN) {
-                            const reason = e.reason || ('code ' + e.code);
-                            fail('WebSocket closed: ' + reason + (e.code === 1006 ? ' (check server logs)' : ''));
-                        }
-                    };
-                });
-
-                await Promise.all([
-                    recorderCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-recorder-processor.js") }}'),
-                    playerCtx.audioWorklet.addModule('{{ url_for("static", filename="music-live/pcm-player-processor.js") }}')
-                ]);
-
-                try {
-                    voiceLiveMicStream = await navigator.mediaDevices.getUserMedia({ 
-                        audio: { 
-                            channelCount: 1,
-                            echoCancellation: true,
-                            noiseSuppression: true
-                        } 
-                    });
-                } catch (micErr) {
-                    throw new Error('Microphone access denied or unavailable. Please check your settings.');
-                }
-
-                voiceLivePlayerNode = new AudioWorkletNode(playerCtx, 'pcm-player-processor');
-                voiceLiveGainNode = playerCtx.createGain();
-                voiceLiveGainNode.gain.value = voiceVolumeGain;
-                voiceLivePlayerNode.connect(voiceLiveGainNode);
-                voiceLiveGainNode.connect(playerCtx.destination);
-
-                voiceLiveMode = true;
-                voiceAgentActive = true;
-                btn.innerHTML = '<i class="fas fa-stop me-1"></i>Listening... (click to stop)';
-
-                const source = recorderCtx.createMediaStreamSource(voiceLiveMicStream);
-                const recNode = new AudioWorkletNode(recorderCtx, 'pcm-recorder-processor');
-                source.connect(recNode);
-
-                const CHUNK = 320;
-                const buf = new Float32Array(CHUNK * 2);
-                let bufLen = 0;
-                const pcm16 = new Int16Array(CHUNK);
-                recNode.port.onmessage = (e) => {
-                    const f = e.data;
-                    for (let i = 0; i < f.length; i++) {
-                        buf[bufLen++] = f[i];
-                        if (bufLen >= CHUNK) {
-                            if (voiceLiveWs?.readyState === WebSocket.OPEN && voiceAgentActive) {
-                                for (let j = 0; j < CHUNK; j++) pcm16[j] = (buf[j] < -1 ? -1 : buf[j] > 1 ? 1 : buf[j]) * 0x7fff;
-                                voiceLiveWs.send(pcm16.buffer);
-                            }
-                            const remain = bufLen - CHUNK;
-                            for (let k = 0; k < remain; k++) buf[k] = buf[CHUNK + k];
-                            bufLen = remain;
-                        }
-                    }
-                };
-
-                voiceLiveWs.onmessage = (ev) => {
-                    try {
-                        const evt = JSON.parse(ev.data);
-                        if (evt.type === 'music_action' && evt.action) executeVoiceAction(evt.action);
-                        const parts = evt.content?.parts || evt.server_content?.model_turn?.parts;
-                        if (!parts) return;
-                        for (const p of parts) {
-                            const inline = p.inlineData || p.inline_data;
-                            if (inline?.data && voiceLivePlayerNode) {
-                                const b64 = inline.data.replace(/-/g,'+').replace(/_/g,'/');
-                                const bin = atob(b64);
-                                const u8 = new Uint8Array(bin.length);
-                                for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-                                voiceLivePlayerNode.port.postMessage(u8.buffer);
-                            }
-                            if (p.text) addAgentTranscript(p.text);
-                        }
-                    } catch (_) {}
-                };
-
-                voiceLiveWs.send(JSON.stringify({ type: 'config', base_url: window.location.origin }));
-                respEl.innerHTML = '<span class="text-success">Live – Speak now</span>';
-
-            } catch (e) {
-                console.error('[VoiceLive] Error:', e);
-                respEl.innerHTML = `<span class="text-danger">${e.message}</span>`;
-                btn.innerHTML = '<i class="fas fa-microphone me-1"></i>Voice Assistant';
-                voiceAgentActive = false;
-            }
-        }
-        function startVoiceRecognition() {
-            if (voiceLiveTried && voiceLiveMode && voiceLiveWs && voiceLiveWs.readyState === WebSocket.OPEN) {
-                return;
-            }
-            tryStartVoiceLive();
         }
 
         function removeFromPlaylist(songId, downloadId, button) {
@@ -1536,38 +1366,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadPlaylist();
-            const volSlider = document.getElementById('voiceVolumeSlider');
-            const volLabel = document.getElementById('voiceVolumeLabel');
-            if (volSlider && volLabel) {
-                volSlider.addEventListener('input', function() {
-                    voiceVolumeGain = parseFloat(this.value);
-                    volLabel.textContent = Math.round(voiceVolumeGain * 100) + '%';
-                    if (voiceLiveGainNode) voiceLiveGainNode.gain.value = voiceVolumeGain;
-                });
-            }
+            glcLoadSaved();
         });
-        function showVoiceTranscript() {
-            const html = voiceTranscriptLog.length ? voiceTranscriptLog.map(e => `<div class="mb-2"><strong>${e.role}:</strong> ${e.text}</div>`).join('') : '<p class="text-muted mb-0">No transcript yet. Start a voice conversation first.</p>';
-            document.getElementById('voiceTranscriptModalBody').innerHTML = html;
-            new bootstrap.Modal(document.getElementById('voiceTranscriptModal')).show();
-        }
     </script>
-
-    <!-- Voice Transcript Modal -->
-    <div class="modal fade" id="voiceTranscriptModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header ink-music-modal-header border-0">
-                    <h5 class="modal-title"><i class="fas fa-file-alt me-2" aria-hidden="true"></i>Conversation transcript</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="voiceTranscriptModalBody" style="max-height: 70vh; overflow-y: auto;">
-                    <p class="text-muted mb-0">No transcript yet.</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Create Artist Profile Modal -->
     <div class="modal fade" id="createArtistModal" tabindex="-1">
@@ -1729,7 +1530,7 @@
                 </div>
             </div>
         </div>
-    </div>    {% include 'includes/_ndotonic_mission_footer.html' %}
+    </div>
 
 </body>
 </html>

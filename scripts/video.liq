@@ -17,18 +17,18 @@ log.stdout := true
 settings.harbor.bind_addrs := ["0.0.0.0"]
 
 # mode="normal" + reload_mode="watch": stable order and pick up file/M3U changes.
-programs = playlist(
-  id="videolist_m3u",
-  reload_mode="watch",
-  mode="normal",
-  "/liqfolder/video/videolist.m3u"
-)
+# The news bulletin is the one live program. Open it when the track starts so a
+# replaced MP4 is read fresh. If that file is missing or unreadable, play a
+# bumper instead of stalling the HLS output.
+news_path = "/liqfolder/glconnect/static/ytautovid/The Weeknd - final_news_broadcast.mp4"
+news = request.dynamic(id="tv_news", {request.create(news_path)})
 jingles = playlist(
   id="tv_jingles_m3u",
   reload_mode="watch",
   mode="normal",
   "/liqfolder/video/tv_jingles.m3u"
 )
+programs = fallback(track_sensitive=false, [news, jingles])
 v = rotate(weights=[1, 2], [jingles, programs])
 v = mksafe(v)
 v = video.fade.in(transition="fade", duration=3., v)

@@ -25,9 +25,15 @@ body.contact-page {
   -webkit-backdrop-filter: blur(12px);
 }
 
-.contact-header-brand img {
+.contact-header-brand img,
+.contact-header-brand-logo {
   display: block;
-  border-radius: 10px;
+  height: 2.5rem;
+  width: auto;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 }
 
 .contact-header-back {

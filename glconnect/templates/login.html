@@ -9,7 +9,6 @@
 {% block salutation %}
 <div class="auth-page-shell">
     <div class="auth-card">
-        {% include 'messages.html' %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="auth-flashes">
@@ -51,6 +50,29 @@
                 {{ form.submit(class="btn auth-submit") }}
             </div>
         </form>
+
+        {% if show_password_reset_help and not reset_email_sent %}
+        <aside class="auth-reset-offer" role="region" aria-label="Password reset help">
+            <p class="auth-reset-title">Need to reset your password?</p>
+            {% if masked_email %}
+            <p class="auth-reset-copy">We can email a secure reset link to <strong>{{ masked_email }}</strong>.</p>
+            {% else %}
+            <p class="auth-reset-copy">Request a reset link using your username or the email on your account.</p>
+            {% endif %}
+            <form method="POST" action="" class="auth-reset-form">
+                {{ form.hidden_tag() }}
+                {% if login_next %}
+                <input type="hidden" name="next" value="{{ login_next }}">
+                {% endif %}
+                <input type="hidden" name="action" value="send_password_reset">
+                <input type="hidden" name="username" value="{{ failed_username }}">
+                <button type="submit" class="btn auth-reset-btn">Email reset link</button>
+            </form>
+            <p class="auth-reset-alt">
+                Or <a href="{{ url_for('routes1.reset_password_request', login=failed_username) if failed_username else url_for('routes1.reset_password_request') }}">open the full reset form</a>
+            </p>
+        </aside>
+        {% endif %}
 
         {% set login_next = request.args.get('next') %}
         <p class="auth-footer">

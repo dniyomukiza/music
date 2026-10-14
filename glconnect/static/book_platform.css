@@ -2235,6 +2235,180 @@ body.ink-marketplace .ink-mp-view-label {
     margin-left: 0.35rem;
 }
 
+/* Marketplace detail modal — format selection & checkout */
+body.ink-marketplace .ink-mp-detail-modal {
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    color: #e8ece9;
+}
+
+body.ink-marketplace .ink-mp-detail-modal .modal-header,
+body.ink-marketplace .ink-mp-detail-modal .modal-footer {
+    background: transparent;
+}
+
+body.ink-marketplace .ink-mp-detail-cover {
+    max-height: 280px;
+    object-fit: contain;
+}
+
+body.ink-marketplace .ink-mp-detail-cover-ph {
+    min-height: 200px;
+}
+
+body.ink-marketplace .ink-mp-format-section {
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.ink-marketplace .ink-mp-format-grid {
+    display: grid;
+    gap: 0.65rem;
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 576px) {
+    body.ink-marketplace .ink-mp-format-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+body.ink-marketplace .ink-mp-format-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin: 0;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+body.ink-marketplace .ink-mp-format-card:hover {
+    border-color: rgba(201, 162, 39, 0.45);
+    background: rgba(201, 162, 39, 0.06);
+}
+
+body.ink-marketplace .ink-mp-format-card:has(.book-format-pick:checked) {
+    border-color: rgba(201, 162, 39, 0.65);
+    background: rgba(201, 162, 39, 0.1);
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.25);
+}
+
+body.ink-marketplace .ink-mp-format-card .form-check-input {
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+}
+
+body.ink-marketplace .ink-mp-format-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+body.ink-marketplace .ink-mp-format-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #f3f5f4;
+}
+
+body.ink-marketplace .ink-mp-format-price {
+    font-weight: 700;
+    color: #c9a227;
+    font-size: 0.9rem;
+}
+
+body.ink-marketplace .ink-mp-format-sub {
+    font-size: 0.78rem;
+    color: rgba(232, 236, 233, 0.65);
+    line-height: 1.35;
+}
+
+body.ink-marketplace .ink-mp-bundle-btn {
+    width: 100%;
+    border-radius: 999px !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-mp-order-summary {
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.ink-marketplace .ink-mp-order-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.875rem;
+    padding: 0.2rem 0;
+    color: rgba(232, 236, 233, 0.88);
+}
+
+body.ink-marketplace .ink-mp-order-note {
+    color: #6ee7a0;
+    font-weight: 600;
+    font-size: 0.78rem;
+}
+
+body.ink-marketplace .ink-mp-order-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.95rem;
+}
+
+body.ink-marketplace .ink-mp-order-total strong {
+    font-size: 1.15rem;
+    color: #c9a227;
+}
+
+body.ink-marketplace .ink-mp-test-banner {
+    padding: 0.65rem 0.85rem;
+    border-radius: 8px;
+    background: rgba(255, 193, 7, 0.12);
+    border: 1px solid rgba(255, 193, 7, 0.35);
+    color: #ffe08a;
+}
+
+body.ink-marketplace .ink-mp-test-banner code {
+    color: #fff3cd;
+    font-size: 0.85em;
+}
+
+body.ink-marketplace .ink-mp-checkout-status {
+    width: 100%;
+}
+
+body.ink-marketplace .ink-mp-checkout-btn {
+    min-width: 12rem;
+    border-radius: 999px !important;
+    font-weight: 600;
+}
+
+body.ink-marketplace .ink-mp-checkout-btn:disabled {
+    opacity: 0.65;
+}
+
+@media (max-width: 575.98px) {
+    body.ink-marketplace .ink-mp-checkout-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    body.ink-marketplace #bookDetailsModal .modal-footer .d-flex.flex-wrap.gap-2.justify-content-end {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+}
+
 @media (max-width: 575.98px) {
     body.ink-marketplace #booksGrid.ink-view-list .ink-book-card-inner {
         flex-direction: column;
@@ -4059,14 +4233,22 @@ body.ink-books-create.ink-upload-book .text-secondary {
 }
 
 body.ink-books-create .ink-create-form-actions {
-    width: 50%;
-    min-width: 11.5rem;
-    max-width: 16rem;
+    width: auto;
+    max-width: none;
+}
+
+body.ink-books-create .ink-create-action-btn {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    padding: 0.35rem 0.75rem;
+    line-height: 1.25;
+    white-space: nowrap;
 }
 
 @media (max-width: 575.98px) {
     body.ink-books-create .ink-create-form-actions {
-        width: 100%;
+        width: auto;
         max-width: none;
     }
 }
@@ -4202,6 +4384,21 @@ body.ink-books-ui .form-check-label strong {
 
 .listing-terms-scrollbox strong {
     color: #0f172a !important;
+}
+
+/* Author Publishing Agreement page — white text on dark background */
+body.author-agreement-page .listing-terms-scrollbox,
+body.author-agreement-page .listing-terms-scrollbox p,
+body.author-agreement-page .listing-terms-scrollbox strong,
+body.author-agreement-page .listing-terms-scrollbox .fw-semibold,
+body.author-agreement-page .listing-terms-scrollbox li,
+body.author-agreement-page .listing-terms-scrollbox ul {
+    color: #fff !important;
+}
+
+body.author-agreement-page .card-body,
+body.author-agreement-page .form-check-label {
+    color: #fff !important;
 }
 
 .glc-media-terms-scrollbox {
@@ -4378,6 +4575,32 @@ body.ink-upload-book .ink-upload-lead {
     color: rgba(232, 236, 233, 0.88) !important;
     max-width: 42rem;
     line-height: 1.55;
+}
+
+body.ink-upload-book .ink-audiobook-author-preview .list-group-item.active {
+    background: rgba(201, 162, 39, 0.14);
+    border-color: rgba(201, 162, 39, 0.35);
+}
+
+body.ink-upload-book .ink-audiobook-author-preview .ink-audiobook-chapter-btn {
+    color: #e8ece9;
+}
+
+body.ink-upload-book .ink-audiobook-author-preview .ink-audiobook-chapter-btn:hover {
+    color: #f5d76a;
+}
+
+body.ink-book-studio .ink-audiobook-author-preview .list-group-item.active {
+    background: rgba(201, 162, 39, 0.14);
+    border-color: rgba(201, 162, 39, 0.35);
+}
+
+body.ink-book-studio .ink-audiobook-author-preview .ink-audiobook-chapter-btn {
+    color: #e8ece9;
+}
+
+body.ink-book-studio .ink-audiobook-author-preview .ink-audiobook-chapter-btn:hover {
+    color: #f5d76a;
 }
 
 body.ink-upload-book .ink-upload-main .alert {
@@ -4814,6 +5037,138 @@ body.ink-edit-book-listing .edit-book .alert-info {
     background: rgba(201, 162, 39, 0.1) !important;
     border: 1px solid rgba(201, 162, 39, 0.3) !important;
     color: #e8ece9 !important;
+}
+
+/* Audiobook: Step 1 review-sections CTA (must be obvious before price/voice) */
+body.ink-edit-book-listing .edit-book .ink-audiobook-step {
+    padding: 1.15rem 1.2rem 1.25rem;
+    border-radius: 16px;
+    border: 2px solid rgba(201, 162, 39, 0.55);
+    background:
+        linear-gradient(145deg, rgba(201, 162, 39, 0.16), rgba(201, 162, 39, 0.06)),
+        rgba(8, 10, 9, 0.82);
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12), 0 14px 36px rgba(0, 0, 0, 0.28);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--review {
+    animation: ink-audiobook-step-pulse 2.8s ease-in-out infinite;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete {
+    border-color: rgba(64, 145, 108, 0.55);
+    background:
+        linear-gradient(145deg, rgba(45, 106, 79, 0.2), rgba(45, 106, 79, 0.08)),
+        rgba(8, 10, 9, 0.82);
+    box-shadow: 0 0 0 1px rgba(64, 145, 108, 0.15), 0 14px 36px rgba(0, 0, 0, 0.28);
+    animation: none;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #060807;
+    background: linear-gradient(145deg, #c9a227, #e0bc3a);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__required {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #f5d76a;
+    border: 1px solid rgba(201, 162, 39, 0.45);
+    background: rgba(201, 162, 39, 0.12);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__title {
+    margin: 0 0 0.35rem;
+    font-family: 'Syne', 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__desc {
+    color: #cfd6d2 !important;
+    line-height: 1.55;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    padding: 0.75rem 1.35rem;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: #060807 !important;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #e0bc3a, #c9a227);
+    box-shadow: 0 8px 24px rgba(201, 162, 39, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn:hover,
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn:focus-visible {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: 0 12px 28px rgba(201, 162, 39, 0.42);
+    color: #060807 !important;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn {
+    background: linear-gradient(145deg, #4caf88, #2d6a4f);
+    box-shadow: 0 8px 24px rgba(45, 106, 79, 0.35);
+    color: #fff !important;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step__status {
+    color: #f5d76a !important;
+    font-weight: 600;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-step__status {
+    color: #9be3c3 !important;
+}
+
+@keyframes ink-audiobook-step-pulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12), 0 14px 36px rgba(0, 0, 0, 0.28); }
+    50% { box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.22), 0 14px 36px rgba(0, 0, 0, 0.28); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.ink-edit-book-listing .edit-book .ink-audiobook-step--review {
+        animation: none;
+    }
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-segments-list .ink-audiobook-seg-card .card-body {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-segments-list .form-check-label {
+    line-height: 1.45;
 }
 
 body.ink-edit-book-listing .edit-book .alert-success {
@@ -5429,31 +5784,6 @@ body.ink-music-dashboard .ink-music-status-icon {
     flex-shrink: 0;
 }
 
-body.ink-music-dashboard .ink-music-voice-strip {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 1rem;
-    padding: 1rem 1.15rem;
-    margin-top: 1.25rem;
-    background: rgba(6, 8, 7, 0.55);
-    border-radius: 14px;
-    border: 1px solid rgba(42, 61, 50, 0.55);
-}
-
-body.ink-music-dashboard .ink-music-voice-strip .btn-outline-info {
-    border: 1px solid rgba(201, 162, 39, 0.35) !important;
-    color: #e8ece9 !important;
-    background: rgba(201, 162, 39, 0.1) !important;
-}
-
-body.ink-music-dashboard .ink-music-voice-strip .btn-outline-info:hover {
-    background: rgba(201, 162, 39, 0.2) !important;
-    border-color: rgba(201, 162, 39, 0.55) !important;
-    color: #fff !important;
-}
-
 body.ink-music-dashboard .ink-music-section-title {
     font-family: "Syne", sans-serif;
     font-weight: 700;
@@ -5716,6 +6046,75 @@ body.ink-book-studio .ink-studio-breadcrumb {
     color: var(--studio-muted);
 }
 
+.ink-inline-gold-link,
+.ink-campaign-req-toggle {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-weight: 600;
+    color: var(--studio-accent, #c9a227);
+    text-decoration: none !important;
+    cursor: pointer;
+    vertical-align: baseline;
+    transition: color 0.15s ease;
+}
+
+.ink-inline-gold-link:hover,
+.ink-inline-gold-link:focus,
+.ink-campaign-req-toggle:hover,
+.ink-campaign-req-toggle.is-open,
+.ink-campaign-req-wrap:hover .ink-campaign-req-toggle {
+    color: #e8c547;
+    text-decoration: none !important;
+}
+
+.ink-campaign-req-toggle:focus-visible {
+    outline: 2px solid rgba(201, 162, 39, 0.55);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.ink-campaign-req-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 0.35rem);
+    z-index: 20;
+    padding: 0.75rem 0.9rem;
+    border-radius: 0.5rem;
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.35);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.ink-campaign-req-list li {
+    padding: 0.35rem 0;
+    line-height: 1.35;
+}
+
+.ink-campaign-req-list li.is-met {
+    color: #9fd4b0;
+}
+
+.ink-campaign-req-list li.is-unmet {
+    color: #d4b896;
+}
+
+.ink-campaign-req-wrap {
+    margin-bottom: 0.5rem;
+}
+
+.ink-campaign-req-static {
+    margin-top: 0.75rem;
+}
+
+.ink-campaign-req-static .ink-campaign-req-list li {
+    padding: 0.25rem 0;
+}
+
 body.ink-book-studio .ink-studio-breadcrumb a {
     color: var(--studio-accent);
     text-decoration: none;
@@ -5743,6 +6142,22 @@ body.ink-book-studio .ink-studio-hero::before {
     right: 0;
     height: 3px;
     background: linear-gradient(90deg, #c9a227, #e0bc3a, #c9a227);
+}
+
+body.ink-book-studio .ink-studio-hero-actions .btn {
+    font-weight: 600;
+    border-radius: 999px !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+body.ink-book-studio .ink-studio-hero-actions .btn:hover,
+body.ink-book-studio .ink-studio-hero-actions .btn:focus-visible {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.65) !important;
+    color: #fff !important;
 }
 
 body.ink-book-studio .ink-studio-cover {
@@ -5788,6 +6203,19 @@ body.ink-book-studio .ink-studio-status-pill.is-draft {
     background: rgba(224, 188, 58, 0.15);
     color: #f5e6a6;
     border: 1px solid rgba(224, 188, 58, 0.35);
+}
+
+body.ink-book-studio a.ink-studio-status-pill-link {
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+body.ink-book-studio a.ink-studio-status-pill-link:hover,
+body.ink-book-studio a.ink-studio-status-pill-link:focus-visible {
+    background: rgba(224, 188, 58, 0.28);
+    border-color: rgba(224, 188, 58, 0.55);
+    color: #fff3c4;
 }
 
 body.ink-book-studio .ink-studio-meta-chip {
@@ -6206,6 +6634,84 @@ body.ink-workspace .ink-workspace-dropdown .dropdown-item.text-danger:hover,
 body.ink-workspace .ink-workspace-dropdown .dropdown-item.text-danger:focus,
 body.ink-marketplace .ink-workspace-dropdown .dropdown-item.text-danger:hover,
 body.ink-marketplace .ink-workspace-dropdown .dropdown-item.text-danger:focus {
+    background-color: rgba(239, 68, 68, 0.14) !important;
+    color: #fca5a5 !important;
+}
+
+/* Shared Ink Studio top nav — not tied to body.ink-workspace (audiobook, uploads, etc.) */
+.ink-workspace-nav {
+    background: rgba(6, 8, 7, 0.94) !important;
+    backdrop-filter: blur(10px);
+    z-index: 1040;
+    isolation: isolate;
+    overflow: visible !important;
+}
+
+.ink-workspace-nav .navbar-collapse,
+.ink-workspace-nav .ink-workspace-nav-secondary {
+    overflow: visible !important;
+}
+
+.ink-workspace-nav .dropdown-menu,
+.ink-workspace-nav .ink-workspace-dropdown {
+    z-index: 1055 !important;
+    pointer-events: auto !important;
+    background: rgba(12, 15, 14, 0.98);
+    border: 1px solid rgba(201, 162, 39, 0.22);
+    border-radius: 12px;
+    padding: 0.35rem;
+}
+
+.ink-workspace-nav .ink-workspace-nav-primary .nav-link {
+    color: rgba(232, 236, 233, 0.78) !important;
+    font-weight: 600;
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+}
+
+.ink-workspace-nav .ink-workspace-nav-primary .nav-link:hover,
+.ink-workspace-nav .ink-workspace-nav-primary .nav-link.active {
+    color: #f5d76a !important;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.ink-workspace-nav .ink-workspace-more-toggle,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle {
+    color: rgba(232, 236, 233, 0.78) !important;
+    border-radius: 8px;
+    transition: color 0.18s ease, background-color 0.18s ease;
+}
+
+.ink-workspace-nav .ink-workspace-more-toggle:hover,
+.ink-workspace-nav .ink-workspace-more-toggle:focus,
+.ink-workspace-nav .ink-workspace-more-toggle.show,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle:hover,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle:focus,
+.ink-workspace-nav .ink-workspace-nav-secondary > .nav-item > .nav-link.dropdown-toggle.show {
+    color: #f5d76a !important;
+    background: rgba(201, 162, 39, 0.1);
+}
+
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item {
+    pointer-events: auto !important;
+    cursor: pointer;
+    color: #e8ece9 !important;
+    border-radius: 8px;
+    font-weight: 500;
+    background-color: transparent;
+    transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item:hover,
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item:focus,
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item.active {
+    background-color: rgba(201, 162, 39, 0.16) !important;
+    color: #f5d76a !important;
+    transform: translateX(3px);
+}
+
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item.text-danger:hover,
+.ink-workspace-nav .ink-workspace-dropdown .dropdown-item.text-danger:focus {
     background-color: rgba(239, 68, 68, 0.14) !important;
     color: #fca5a5 !important;
 }
@@ -6629,10 +7135,119 @@ body.ink-workspace .ink-workspace-bg {
         #060807 !important;
 }
 
+body.ink-edit-book-listing .edit-book .listing-terms-section--must {
+    padding: 1.15rem 1.2rem 1.25rem;
+    border-radius: 16px;
+    border: 2px solid rgba(201, 162, 39, 0.55) !important;
+    background:
+        linear-gradient(145deg, rgba(201, 162, 39, 0.16), rgba(201, 162, 39, 0.06)),
+        rgba(8, 10, 9, 0.82) !important;
+    box-shadow: 0 0 0 1px rgba(201, 162, 39, 0.12), 0 14px 36px rgba(0, 0, 0, 0.28);
+    animation: ink-audiobook-step-pulse 2.8s ease-in-out infinite;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-section--complete {
+    border-color: rgba(64, 145, 108, 0.55) !important;
+    background:
+        linear-gradient(145deg, rgba(45, 106, 79, 0.2), rgba(45, 106, 79, 0.08)),
+        rgba(8, 10, 9, 0.82) !important;
+    box-shadow: 0 0 0 1px rgba(64, 145, 108, 0.15), 0 14px 36px rgba(0, 0, 0, 0.28);
+    animation: none;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    align-self: flex-start;
+    min-height: unset;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(201, 162, 39, 0.28);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--compact:hover,
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--compact:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(201, 162, 39, 0.34);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn--compact {
+    box-shadow: 0 4px 14px rgba(45, 106, 79, 0.28);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn--compact:hover,
+body.ink-edit-book-listing .edit-book .ink-audiobook-step--complete .ink-audiobook-review-btn--compact:focus-visible {
+    box-shadow: 0 6px 18px rgba(45, 106, 79, 0.34);
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-review-btn--muted {
+    opacity: 0.55;
+    filter: grayscale(0.15);
+    box-shadow: none;
+    transform: none;
+}
+
+body.ink-edit-book-listing .edit-book .ink-audiobook-generate-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    min-width: 0;
+    padding: 0.55rem 1.15rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.ink-edit-book-listing .edit-book .listing-terms-section--must {
+        animation: none;
+    }
+}
+
 body.ink-edit-book-listing .edit-book .bg-light,
 body.ink-edit-book-listing .edit-book .listing-terms-section {
     background: rgba(12, 15, 14, 0.75) !important;
     color: #e8ece9 !important;
+    border-color: rgba(201, 162, 39, 0.22) !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-section h6,
+body.ink-edit-book-listing .edit-book .listing-terms-section .text-muted,
+body.ink-edit-book-listing .edit-book .listing-terms-section .form-check-label,
+body.ink-edit-book-listing .edit-book .listing-terms-section #listingTermsPanel,
+body.ink-edit-book-listing .edit-book .listing-terms-section #listingTermsPanel small {
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-section h6 i {
+    color: #e0bc3a !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox {
+    background: rgba(8, 10, 9, 0.82) !important;
+    border-color: rgba(201, 162, 39, 0.22) !important;
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox p,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox em,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox .fw-semibold,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox li,
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox ul {
+    color: #e8ece9 !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox strong {
+    color: #ffffff !important;
+}
+
+body.ink-edit-book-listing .edit-book .listing-terms-scrollbox .text-muted {
+    color: #b8c4be !important;
 }
 
 body.ink-edit-book-listing .edit-book label.text-dark,
@@ -6682,4 +7297,311 @@ body.ink-edit-book-listing .edit-book .form-check-label.text-dark {
     overflow-y: auto;
     font-size: 0.95rem;
     line-height: 1.6;
+}
+
+/* Music player */
+body.ink-music-dashboard {
+    padding-bottom: 6.5rem;
+}
+body.ink-music-dashboard .glc-listen {
+    max-width: 760px;
+    padding: 1.5rem 1rem 2rem;
+}
+body.ink-music-dashboard .glc-listen-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+body.ink-music-dashboard .glc-search {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    padding: 0.7rem 1rem;
+    color: rgba(255, 255, 255, 0.45);
+}
+body.ink-music-dashboard .glc-search input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: #f4f1ea;
+    font-size: 1rem;
+    outline: none;
+}
+body.ink-music-dashboard .glc-search input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+body.ink-music-dashboard .glc-release {
+    border: 0;
+    background: var(--primary-color);
+    color: #14120c;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.65rem 1rem;
+    white-space: nowrap;
+}
+body.ink-music-dashboard .glc-tracks {
+    display: flex;
+    flex-direction: column;
+}
+body.ink-music-dashboard .glc-tracks-status {
+    color: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    padding: 3rem 1rem;
+    margin: 0;
+}
+body.ink-music-dashboard .glc-track {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.4rem;
+    border-radius: 10px;
+}
+body.ink-music-dashboard .glc-track:hover,
+body.ink-music-dashboard .glc-track.is-playing {
+    background: rgba(255, 255, 255, 0.06);
+}
+body.ink-music-dashboard .glc-track-play,
+body.ink-music-dashboard .glc-icon-btn,
+body.ink-music-dashboard .glc-play-btn,
+body.ink-music-dashboard .glc-next-toggle,
+body.ink-music-dashboard .glc-next-item {
+    border: 0;
+    background: transparent;
+    color: inherit;
+}
+body.ink-music-dashboard .glc-track-play {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    color: #f4f1ea;
+}
+body.ink-music-dashboard .glc-track.is-playing .glc-track-play {
+    color: var(--primary-color);
+}
+body.ink-music-dashboard .glc-track-copy {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 0;
+}
+body.ink-music-dashboard .glc-track-name {
+    color: #f4f1ea;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+body.ink-music-dashboard .glc-track-artist {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.85rem;
+}
+body.ink-music-dashboard .glc-save {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: transparent;
+    color: #f4f1ea;
+    display: grid;
+    place-items: center;
+    padding: 0;
+}
+body.ink-music-dashboard .glc-save.is-saved {
+    color: var(--primary-color);
+    border-color: rgba(201, 162, 39, 0.6);
+}
+body.ink-music-dashboard .glc-player {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) minmax(0, 2.2fr) auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 1.25rem;
+    background: rgba(12, 15, 14, 0.96);
+    border-top: 1px solid rgba(201, 162, 39, 0.28);
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+body.ink-music-dashboard .glc-player-now {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 0;
+}
+body.ink-music-dashboard .glc-player-art {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 8px;
+    background: linear-gradient(145deg, #2a2416, #14120c);
+    color: var(--primary-color);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+body.ink-music-dashboard .glc-player-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    min-width: 0;
+}
+body.ink-music-dashboard .glc-player-title,
+body.ink-music-dashboard .glc-player-artist {
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+body.ink-music-dashboard .glc-player-title {
+    color: #f4f1ea;
+    font-weight: 600;
+}
+body.ink-music-dashboard .glc-player-artist {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.85rem;
+}
+body.ink-music-dashboard .glc-player-transport {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+body.ink-music-dashboard .glc-play-btn {
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    background: #f4f1ea;
+    color: #14120c;
+}
+body.ink-music-dashboard .glc-icon-btn {
+    color: #f4f1ea;
+    width: 2rem;
+    height: 2rem;
+}
+body.ink-music-dashboard .glc-time {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    min-width: 2.4rem;
+}
+body.ink-music-dashboard #glcScrub,
+body.ink-music-dashboard #glcVolume {
+    accent-color: var(--primary-color);
+}
+body.ink-music-dashboard #glcScrub {
+    flex: 1;
+    min-width: 4rem;
+}
+body.ink-music-dashboard .glc-player-side {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+body.ink-music-dashboard .glc-volume {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+body.ink-music-dashboard #glcVolume {
+    width: 5.5rem;
+}
+body.ink-music-dashboard .glc-next-toggle {
+    color: #f4f1ea;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+body.ink-music-dashboard .glc-next-panel {
+    position: fixed;
+    right: 1rem;
+    bottom: 5.4rem;
+    z-index: 1041;
+    width: min(22rem, calc(100vw - 2rem));
+    max-height: 18rem;
+    overflow: auto;
+    background: #161a18;
+    border: 1px solid rgba(201, 162, 39, 0.28);
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+body.ink-music-dashboard .glc-next-label,
+body.ink-music-dashboard .glc-next-empty {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+    margin: 0 0 0.4rem;
+}
+body.ink-music-dashboard .glc-next-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+body.ink-music-dashboard .glc-next-row .glc-next-item {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+}
+body.ink-music-dashboard .glc-next-row.is-playing .glc-next-item span {
+    color: var(--primary-color);
+}
+body.ink-music-dashboard .glc-pl-remove {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    flex-shrink: 0;
+}
+body.ink-music-dashboard .glc-next-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    color: #f4f1ea;
+    text-align: left;
+    padding: 0.45rem 0.35rem;
+    border-radius: 8px;
+}
+body.ink-music-dashboard .glc-next-item small {
+    color: rgba(255, 255, 255, 0.55);
+}
+body.ink-music-dashboard .glc-next-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+@media (max-width: 760px) {
+    body.ink-music-dashboard .glc-player {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "now side"
+            "transport transport";
+        gap: 0.45rem 0.75rem;
+        padding: 0.6rem 0.8rem 0.75rem;
+    }
+    body.ink-music-dashboard .glc-player-now { grid-area: now; }
+    body.ink-music-dashboard .glc-player-transport { grid-area: transport; }
+    body.ink-music-dashboard .glc-player-side { grid-area: side; }
+    body.ink-music-dashboard .glc-volume { display: none; }
+    body.ink-music-dashboard { padding-bottom: 8rem; }
 }
