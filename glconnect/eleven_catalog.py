@@ -229,9 +229,15 @@ def _matches_query(track: dict[str, Any], query: str) -> bool:
     if not q:
         return True
     blob = f"{track.get('artist', '')} {track.get('name', '')} {track.get('filename', '')}".lower()
+    title, by_word, artist = q.partition(" by ")
+    if by_word and title and artist:
+        name = (track.get("name") or "").lower()
+        who = (track.get("artist") or "").lower()
+        if title in name and (artist == who or artist in who or who in artist):
+            return True
     if q in blob:
         return True
-    words = [word for word in q.split() if len(word) > 1]
+    words = [word for word in q.split() if len(word) > 1 and word != "by"]
     return bool(words) and all(word in blob for word in words)
 
 

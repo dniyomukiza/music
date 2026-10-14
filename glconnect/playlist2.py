@@ -140,13 +140,26 @@ def _search_public(query):
     return results
 
 
+def _eleven_matches(query):
+    """GLC Radio originals only, used when the full catalog search cannot run."""
+    return [track for track in list_eleven_catalog(sync_db=False) if _matches_query(track, query)]
+
+
 @play.route('/playlist2', methods=['GET'])
 def playlist2():
     """Search GLC Radio originals and approved artist submissions by title or artist."""
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])
-    return jsonify(_search_public(query))
+    try:
+        return jsonify(_search_public(query))
+    except Exception:
+        current_app.logger.exception("Music search failed for %r", query)
+        try:
+            return jsonify(_eleven_matches(query))
+        except Exception:
+            current_app.logger.exception("Music search fallback failed for %r", query)
+            return jsonify([])
 
 
 @play.route('/suggestions', methods=['GET'])
@@ -184,10 +197,18 @@ def get_suggestions():
 def get_artist_songs():
     artist_name = request.args.get('artist_name', '').strip()
     artist_id = request.args.get('artist_id', type=int)
-    if artist_id and not artist_name:
-        artist = Artist.query.get(artist_id)
-        artist_name = artist.artist_name if artist else ""
-    return jsonify(_songs_for_artist_name(artist_name))
+    try:
+        if artist_id and not artist_name:
+            artist = Artist.query.get(artist_id)
+            artist_name = artist.artist_name if artist else ""
+        return jsonify(_songs_for_artist_name(artist_name))
+    except Exception:
+        current_app.logger.exception("Artist song list failed for %r", artist_name)
+        try:
+            return jsonify(_eleven_matches(artist_name))
+        except Exception:
+            current_app.logger.exception("Artist song fallback failed for %r", artist_name)
+            return jsonify([])
 
 
 @play.route('/get_available_songs', methods=['GET'])

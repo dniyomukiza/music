@@ -143,15 +143,16 @@
         }
 
         function glcNormalize(song) {
-            let name = (song.name || '').trim();
-            let artist = (song.artist || '').trim();
+            if (!song || typeof song !== 'object') return null;
+            let name = String(song.name || '').trim();
+            let artist = String(song.artist || '').trim();
             const byPattern = /^\s*by\s+(.+)$/i;
             if (byPattern.test(name)) {
                 const extracted = name.match(byPattern)[1].trim();
                 if (!artist || artist === 'Unknown' || artist === 'Unknown Artist') artist = extracted;
                 name = '';
             }
-            const path = song.path || (song.song_id ? `/playlist2/song/${song.song_id}/file` : '');
+            const path = song.path || (song.song_id != null && song.song_id !== '' ? `/playlist2/song/${song.song_id}/file` : '');
             return {
                 song_id: song.song_id != null ? song.song_id : null,
                 download_id: song.download_id != null ? song.download_id : null,
@@ -171,27 +172,40 @@
 
         function glcShowTracks(data, message) {
             const container = document.getElementById('searchResultsContainer');
-            glcResults = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song.path; });
-            if (!glcResults.length) {
-                container.innerHTML = '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
-                glcMarkRow();
-                glcRenderPlaylist();
-                return;
+            const savedHas = glcSavedIds && typeof glcSavedIds.has === 'function'
+                ? function (id) { return glcSavedIds.has(id); }
+                : function () { return false; };
+            try {
+                glcResults = (Array.isArray(data) ? data : []).map(glcNormalize).filter(function (song) { return song && song.path; });
+                if (!glcResults.length) {
+                    container.innerHTML = '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
+                } else {
+                    container.innerHTML = glcResults.map(function (song, index) {
+                        const songId = Number(song.song_id);
+                        const saved = song.song_id != null && songId && savedHas(songId);
+                        const playlist = song.song_id != null
+                            ? '<button type="button" class="glc-save' + (saved ? ' is-saved' : '') + '" data-playlist="' + index + '" aria-label="' + glcEsc((saved ? 'Remove ' : 'Add ') + song.name + (saved ? ' from playlist' : ' to playlist')) + '"><i class="fas fa-' + (saved ? 'minus' : 'plus') + '" aria-hidden="true"></i></button>'
+                            : '';
+                        return '<div class="glc-track" data-index="' + index + '">' +
+                            '<button type="button" class="glc-track-play" data-play="' + index + '" aria-label="Play ' + glcEsc(song.name) + '"><i class="fas fa-play" aria-hidden="true"></i></button>' +
+                            '<button type="button" class="glc-track-copy" data-play="' + index + '">' +
+                            '<span class="glc-track-name">' + glcEsc(song.name) + '</span>' +
+                            '<span class="glc-track-artist">' + glcEsc(song.artist) + '</span>' +
+                            '</button>' + playlist + '</div>';
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('Could not draw search results:', error);
+                if (!container) return;
+                const names = (Array.isArray(data) ? data : []).map(function (song) {
+                    return song && (song.name || song.filename);
+                }).filter(Boolean);
+                container.innerHTML = names.length
+                    ? names.map(function (name) { return '<p class="glc-tracks-status">' + glcEsc(name) + '</p>'; }).join('')
+                    : '<p class="glc-tracks-status">' + glcEsc(message || 'No songs found.') + '</p>';
             }
-            container.innerHTML = glcResults.map(function (song, index) {
-                const saved = song.song_id != null && glcSavedIds.has(Number(song.song_id));
-                const playlist = song.song_id != null
-                    ? '<button type="button" class="glc-save' + (saved ? ' is-saved' : '') + '" data-playlist="' + index + '" aria-label="' + glcEsc((saved ? 'Remove ' : 'Add ') + song.name + (saved ? ' from playlist' : ' to playlist')) + '"><i class="fas fa-' + (saved ? 'minus' : 'plus') + '" aria-hidden="true"></i></button>'
-                    : '';
-                return '<div class="glc-track" data-index="' + index + '">' +
-                    '<button type="button" class="glc-track-play" data-play="' + index + '" aria-label="Play ' + glcEsc(song.name) + '"><i class="fas fa-play" aria-hidden="true"></i></button>' +
-                    '<button type="button" class="glc-track-copy" data-play="' + index + '">' +
-                    '<span class="glc-track-name">' + glcEsc(song.name) + '</span>' +
-                    '<span class="glc-track-artist">' + glcEsc(song.artist) + '</span>' +
-                    '</button>' + playlist + '</div>';
-            }).join('');
-            glcMarkRow();
-            glcRenderPlaylist();
+            try { glcMarkRow(); } catch (error) { console.error(error); }
+            try { glcRenderPlaylist(); } catch (error) { console.error(error); }
         }
 
         function glcMarkRow() {
@@ -227,6 +241,7 @@
                 return;
             }
             list.innerHTML = glcPlaylist.map(function (song, index) {
+                if (!song) return '';
                 const on = glcSource === 'playlist' && glcCurrent && song.path === glcCurrent.path;
                 return '<div class="glc-next-row' + (on ? ' is-playing' : '') + '">' +
                     '<button type="button" class="glc-next-item" data-play-saved="' + index + '">' +
@@ -620,16 +635,13 @@
             
             // Display songs
             if (songs.length > 0) {
-                songs.forEach((song, index) => {
-                    const songId = song.id || '';
-                    const songName = song.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                    const songArtist = song.artist.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                songs.forEach((song) => {
                     html += `
-                        <div class="suggestion-item" data-type="song" data-song-id="${songId}" data-song-name="${songName}" data-song-artist="${songArtist}" data-value="${songName} by ${songArtist}" onclick="selectSongSuggestion('${songName} by ${songArtist}')">
+                        <div class="suggestion-item" role="option" data-type="song" data-song-name="${glcEsc(song.name)}">
                             <i class="fas fa-music suggestion-icon"></i>
                             <div class="suggestion-content">
-                                <div class="suggestion-name">${song.name}</div>
-                                <div class="suggestion-artist">by ${song.artist}</div>
+                                <div class="suggestion-name">${glcEsc(song.name)}</div>
+                                <div class="suggestion-artist">by ${glcEsc(song.artist)}</div>
                             </div>
                             <span class="suggestion-type">Song</span>
                         </div>
@@ -641,6 +653,11 @@
             suggestionsContainer.querySelectorAll('[data-type="artist"]').forEach(function (item) {
                 item.addEventListener('click', function () {
                     selectArtistSuggestion(null, item.getAttribute('data-artist-name'));
+                });
+            });
+            suggestionsContainer.querySelectorAll('[data-type="song"]').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    selectSongSuggestion(item.getAttribute('data-song-name'));
                 });
             });
             
@@ -673,6 +690,7 @@
             
             if (!suggestionsContainer.classList.contains('show') || suggestions.length === 0) {
                 if (event.key === 'Enter') {
+                    event.preventDefault();
                     searchMusic();
                 }
                 return;
@@ -697,8 +715,7 @@
                         if (type === 'artist') {
                             selectArtistSuggestion(null, selected.getAttribute('data-artist-name'));
                         } else {
-                            const songValue = selected.getAttribute('data-value');
-                            selectSongSuggestion(songValue);
+                            selectSongSuggestion(selected.getAttribute('data-song-name'));
                         }
                     } else {
                         searchMusic();
@@ -752,11 +769,13 @@
         function selectSongSuggestion(songValue) {
             const input = document.getElementById('musicSearchInput');
             const suggestionsContainer = document.getElementById('autocompleteSuggestions');
-            input.value = songValue;
+            let value = String(songValue || '').trim();
+            const byParts = value.split(/\s+by\s+/i);
+            if (byParts.length >= 2 && byParts[0].trim()) value = byParts[0].trim();
+            input.value = value;
             suggestionsContainer.classList.remove('show');
             suggestionsContainer.innerHTML = '';
             selectedSuggestionIndex = -1;
-            // Perform normal search for the song immediately (no delay, no button click needed)
             searchMusic();
         }
         
@@ -846,6 +865,30 @@
             `;
         }
 
+        let glcSearchToken = 0;
+
+        function glcSearchQueries(query) {
+            const queries = [query];
+            const byParts = query.split(/\s+by\s+/i);
+            const title = (byParts[0] || '').trim();
+            if (byParts.length >= 2 && title && title.toLowerCase() !== query.toLowerCase()) queries.push(title);
+            return queries;
+        }
+
+        function glcFetchSongList(query) {
+            return fetch('/playlist2/playlist2?q=' + encodeURIComponent(query))
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Search failed (' + response.status + ')');
+                    return response.text();
+                })
+                .then(function (text) {
+                    const body = String(text || '').replace(/^\uFEFF/, '').trim();
+                    const data = body ? JSON.parse(body) : [];
+                    if (data && !Array.isArray(data) && data.redirect) return { redirect: data.redirect, rows: [] };
+                    return { redirect: '', rows: Array.isArray(data) ? data : [] };
+                });
+        }
+
         function searchMusic() {
             const query = document.getElementById('musicSearchInput').value.trim();
             const resultsContainer = document.getElementById('searchResultsContainer');
@@ -855,21 +898,35 @@
                 return;
             }
 
+            const token = ++glcSearchToken;
+            const queries = glcSearchQueries(query);
             resultsContainer.innerHTML = '<p class="glc-tracks-status">Searching…</p>';
 
-            fetch(`/playlist2/playlist2?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.redirect) {
-                        window.location.href = data.redirect;
+            const finish = function (rows) {
+                if (token !== glcSearchToken) return;
+                glcShowTracks(rows, 'No songs found for ' + query);
+            };
+
+            const attempt = function (index, retry) {
+                return glcFetchSongList(queries[index]).then(function (result) {
+                    if (token !== glcSearchToken) return;
+                    if (result.redirect) {
+                        window.location.href = result.redirect;
                         return;
                     }
-                    glcShowTracks(data, 'No songs found for ' + query);
-                })
-                .catch(error => {
+                    if (!result.rows.length && index + 1 < queries.length) return attempt(index + 1, 0);
+                    finish(result.rows);
+                }).catch(function (error) {
+                    if (token !== glcSearchToken) return;
+                    if (!retry) return attempt(index, true);
+                    if (index + 1 < queries.length) return attempt(index + 1, 0);
                     console.error('Search error:', error);
-                    glcShowTracks([], 'Search could not be completed. Try again.');
+                    glcResults = [];
+                    resultsContainer.innerHTML = '<p class="glc-tracks-status">Search could not be completed. Try again.</p>';
                 });
+            };
+
+            attempt(0, false);
         }
 
 
